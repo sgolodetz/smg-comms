@@ -6,7 +6,7 @@ from typing import Callable, Dict, Optional, List, Set, Tuple
 
 from smg.utility import PooledQueue
 
-from .frame_message import FrameMessage
+from ..base import FrameMessage
 from .mapping_client_handler import MappingClientHandler
 
 
