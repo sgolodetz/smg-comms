@@ -45,7 +45,7 @@ class SocketUtil:
             # and return True to indicate a successful read.
             np.copyto(msg.get_data(), np.frombuffer(data, dtype=np.uint8))
             return True
-        except (ConnectionResetError, socket.timeout, ValueError):
+        except (ConnectionAbortedError, ConnectionResetError, socket.timeout, ValueError):
             # If any exceptions are thrown during the read, return False.
             return False
 

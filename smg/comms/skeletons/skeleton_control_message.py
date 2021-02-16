@@ -31,5 +31,5 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # noinspection PyUnresolvedReferences
     @staticmethod
-    def end_detection(token: int, *, blocking: bool) -> SkeletonControlMessage:
-        return SkeletonControlMessage(token if blocking else -token)
+    def end_detection(frame_idx: int, *, blocking: bool) -> SkeletonControlMessage:
+        return SkeletonControlMessage(frame_idx if blocking else -frame_idx)

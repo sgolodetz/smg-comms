@@ -5,7 +5,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import FrameMessage, SimpleMessage, SocketUtil
+from ..base import AckMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
 
@@ -45,26 +45,41 @@ class SkeletonDetectionClient:
 
     # PUBLIC METHODS
 
-    def begin_detection(self, image: np.ndarray) -> Optional[int]:
-        connection_ok: bool = True
-        connection_ok = connection_ok and SocketUtil.write_message(
-            self.__sock, SkeletonControlMessage.begin_detection()
+    def begin_detection(self, frame_idx: int, image: np.ndarray, world_from_camera: np.ndarray) -> bool:
+        # Make the frame message.
+        frame_msg: FrameMessage = RGBDFrameMessageUtil.make_frame_message(
+            frame_idx, image, np.zeros(image.shape[:2], dtype=np.uint16), world_from_camera
         )
 
-        # TODO: Send the actual frame message.
+        # If requested, compress the frame prior to transmission.
+        compressed_frame_msg: FrameMessage = frame_msg
+        if self.__frame_compressor is not None:
+            compressed_frame_msg = self.__frame_compressor(frame_msg)
 
-        token_msg: SimpleMessage[int] = SimpleMessage[int]()
-        connection_ok = connection_ok and SocketUtil.read_message(self.__sock, token_msg)
+        # Make the frame header message.
+        max_images: int = 2
+        header_msg: FrameHeaderMessage = FrameHeaderMessage(max_images)
+        header_msg.set_image_byte_sizes(compressed_frame_msg.get_image_byte_sizes())
+        header_msg.set_image_shapes(compressed_frame_msg.get_image_shapes())
 
-        if connection_ok:
-            return token_msg.extract_value()
-        else:
-            return None
+        # First send the begin detection message, then send the frame header message, then send the frame message,
+        # then wait for an acknowledgement from the service. We chain all of these with 'and' so as to early out
+        # in case of failure.
+        connection_ok: bool = True
+        ack_msg: AckMessage = AckMessage()
 
-    def end_detection(self, token: int, *, blocking: bool = True) -> Optional[List[Skeleton]]:
+        connection_ok = connection_ok and \
+            SocketUtil.write_message(self.__sock, SkeletonControlMessage.begin_detection()) and \
+            SocketUtil.write_message(self.__sock, header_msg) and \
+            SocketUtil.write_message(self.__sock, compressed_frame_msg) and \
+            SocketUtil.read_message(self.__sock, ack_msg)
+
+        return connection_ok
+
+    def end_detection(self, frame_idx: int, *, blocking: bool = True) -> Optional[List[Skeleton]]:
         connection_ok: bool = True
         connection_ok = connection_ok and SocketUtil.write_message(
-            self.__sock, SkeletonControlMessage.end_detection(token, blocking=blocking)
+            self.__sock, SkeletonControlMessage.end_detection(frame_idx + 1, blocking=blocking)
         )
 
         # TODO: Receive the list of skeletons.
