@@ -1,6 +1,7 @@
 import numpy as np
 import socket
 
+from timeit import default_timer as timer
 from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
@@ -89,10 +90,13 @@ class SkeletonDetectionClient:
             data_msg: DataMessage = DataMessage(data_size_msg.extract_value())
             connection_ok = SocketUtil.read_message(self.__sock, data_msg)
             if connection_ok:
+                start = timer()
                 data: str = str(data_msg.get_data().tobytes(), "utf-8")
                 skeletons: List[Skeleton] = eval(
                     data, {'array': np.array, 'Keypoint': Skeleton.Keypoint, 'Skeleton': Skeleton}
                 )
+                end = timer()
+                print(f"Decode Time: {end - start}s")
                 return skeletons
 
         return []

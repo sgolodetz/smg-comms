@@ -3,6 +3,7 @@ import socket
 import threading
 
 from select import select
+from timeit import default_timer as timer
 from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
@@ -156,11 +157,15 @@ class SkeletonDetectionService:
                         if acquired:
                             try:
                                 if self.__skeletons is not None:
+                                    start = timer()
                                     data: np.ndarray = np.frombuffer(
                                         bytes(repr(self.__skeletons), "utf-8"), dtype=np.uint8
                                     )
                                     data_msg: DataMessage = DataMessage(len(data))
                                     np.copyto(data_msg.get_data(), data)
+                                    end = timer()
+                                    print(f"Encode Time: {end - start}s")
+
                                     connection_ok = \
                                         SocketUtil.write_message(client_sock, SimpleMessage[int](len(data))) and \
                                         SocketUtil.write_message(client_sock, data_msg)
