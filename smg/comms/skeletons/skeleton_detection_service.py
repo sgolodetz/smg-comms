@@ -5,6 +5,8 @@ import threading
 from select import select
 from typing import Callable, List, Optional, Tuple
 
+from smg.skeletons import Skeleton
+
 from ..base import AckMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
@@ -15,19 +17,29 @@ class SkeletonDetectionService:
     # CONSTRUCTOR
 
     def __init__(self, port: int = 7852, *,
-                 frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
+                 frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None,
+                 frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]]):
         """
         TODO
 
         :param port:                TODO
         :param frame_decompressor:  TODO
+        :param frame_processor:     TODO
         """
+        self.__colour_image: Optional[np.ndarray] = None
+        self.__depth_image: Optional[np.ndarray] = None
+        self.__detection_thread: threading.Thread = threading.Thread(target=self.__run_detection)
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
+        self.__frame_processor: Callable[[np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
         self.__port: int = port
         self.__service_thread: threading.Thread = threading.Thread(target=self.__run_service)
         self.__should_terminate: threading.Event = threading.Event()
+        self.__skeletons: Optional[List[Skeleton]] = None
+        self.__world_from_camera: Optional[np.ndarray] = None
 
         self.__lock: threading.Lock = threading.Lock()
+        self.__detection_is_needed: bool = False
+        self.__detection_needed: threading.Condition = threading.Condition(self.__lock)
 
     # DESTRUCTOR
 
@@ -47,8 +59,12 @@ class SkeletonDetectionService:
 
     # PUBLIC METHODS
 
+    def should_terminate(self) -> bool:
+        return self.__should_terminate.is_set()
+
     def start(self) -> None:
         """Start the service."""
+        self.__detection_thread.start()
         self.__service_thread.start()
 
     def terminate(self) -> None:
@@ -56,12 +72,28 @@ class SkeletonDetectionService:
         with self.__lock:
             if not self.__should_terminate.is_set():
                 self.__should_terminate.set()
+                self.__detection_thread.join()
                 self.__service_thread.join()
 
     # PRIVATE METHODS
 
+    def __run_detection(self) -> None:
+        """Run the detection thread."""
+        while not self.__should_terminate.is_set():
+            with self.__lock:
+                while not self.__detection_is_needed:
+                    self.__detection_needed.wait(0.1)
+                    if self.__should_terminate.is_set():
+                        return
+
+                self.__skeletons = self.__frame_processor(
+                    self.__colour_image, self.__depth_image, self.__world_from_camera
+                )
+
+                self.__detection_is_needed = False
+
     def __run_service(self) -> None:
-        """Run the service."""
+        """Run the service thread."""
         # Set up the server socket and listen for connections.
         server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(("127.0.0.1", self.__port))
@@ -81,9 +113,7 @@ class SkeletonDetectionService:
                     value: int = control_msg.extract_value()
                     if value == SkeletonControlMessage.BEGIN_DETECTION:
                         print("Begin Detection")
-                        # TODO: Receive the actual image and store the detection request.
 
-###
                         # Try to read a frame header message.
                         max_images: int = 2
                         header_msg: FrameHeaderMessage = FrameHeaderMessage(max_images)
@@ -107,22 +137,27 @@ class SkeletonDetectionService:
                                     decompressed_frame_msg = self.__frame_decompressor(frame_msg)
 
                                 # TODO: Comment here.
-                                frame_idx, image, _, world_from_camera = RGBDFrameMessageUtil.extract_frame_data(
-                                    decompressed_frame_msg
-                                )
-
-                                # TEMPORARY
-                                import cv2
-                                cv2.imshow("Image", image)
-                                cv2.waitKey()
+                                with self.__lock:
+                                    frame_idx, self.__colour_image, self.__depth_image, self.__world_from_camera = \
+                                        RGBDFrameMessageUtil.extract_frame_data(decompressed_frame_msg)
+                                    self.__skeletons = None
+                                    self.__detection_is_needed = True
+                                    self.__detection_needed.notify()
 
                                 # Send an acknowledgement to the client.
                                 connection_ok = SocketUtil.write_message(client_sock, AckMessage())
-###
                     else:
                         frame_idx, blocking = np.abs(value) - 1, value >= 0
                         print(f"End Detection: Frame Index = {frame_idx}, blocking = {blocking}")
+
                         # TODO: Check whether the detection request has been processed yet.
+                        acquired: bool = self.__lock.acquire(blocking=blocking)
+                        if acquired:
+                            try:
+                                if self.__skeletons is not None:
+                                    pass
+                            finally:
+                                self.__lock.release()
             else:
                 timeout: float = 0.1
                 readable, _, _ = select([server_sock], [], [], timeout)
@@ -133,3 +168,5 @@ class SkeletonDetectionService:
                     if s is server_sock:
                         client_sock, client_endpoint = server_sock.accept()
                         print(f"Accepted connection from client @ {client_endpoint}")
+
+        self.__should_terminate.set()
