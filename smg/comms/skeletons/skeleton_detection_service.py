@@ -16,34 +16,23 @@ class SkeletonDetectionService:
 
     # CONSTRUCTOR
 
-    def __init__(self, port: int = 7852, *,
-                 frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None,
-                 frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]]):
+    def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]],
+                 port: int = 7852, *, frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
         """
         TODO
 
+        :param frame_processor:     TODO
         :param port:                TODO
         :param frame_decompressor:  TODO
-        :param frame_processor:     TODO
         """
-        self.__colour_image: Optional[np.ndarray] = None
-        self.__depth_image: Optional[np.ndarray] = None
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
         self.__frame_processor: Callable[[np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
         self.__port: int = port
-        self.__skeletons: Optional[List[Skeleton]] = None
-        self.__world_from_camera: Optional[np.ndarray] = None
 
     # PUBLIC METHODS
 
-    def start(self) -> None:
-        """Start the service."""
-        self.__run_service()
-
-    # PRIVATE METHODS
-
-    def __run_service(self) -> None:
-        """Run the service thread."""
+    def run(self) -> None:
+        """Run the service."""
         # Set up the server socket and listen for connections.
         server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(("127.0.0.1", self.__port))
@@ -52,8 +41,8 @@ class SkeletonDetectionService:
         print(f"Listening for connections on 127.0.0.1:{self.__port}...")
 
         client_sock: Optional[socket.SocketType] = None
-
         connection_ok: bool = True
+        skeletons: Optional[List[Skeleton]] = None
 
         while connection_ok:
             if client_sock is not None:
@@ -87,24 +76,19 @@ class SkeletonDetectionService:
                                     decompressed_frame_msg = self.__frame_decompressor(frame_msg)
 
                                 # TODO: Comment here.
-                                frame_idx, self.__colour_image, self.__depth_image, self.__world_from_camera = \
+                                frame_idx, colour_image, depth_image, world_from_camera = \
                                     RGBDFrameMessageUtil.extract_frame_data(decompressed_frame_msg)
 
                                 # Send an acknowledgement to the client.
                                 connection_ok = SocketUtil.write_message(client_sock, AckMessage())
 
-                                self.__skeletons = self.__frame_processor(
-                                    self.__colour_image, self.__depth_image, self.__world_from_camera
-                                )
+                                skeletons = self.__frame_processor(colour_image, depth_image, world_from_camera)
                     else:
                         frame_idx, blocking = np.abs(value) - 1, value >= 0
                         print(f"End Detection: Frame Index = {frame_idx}, blocking = {blocking}")
 
-                        # TODO: If this isn't the first frame:
-                        if self.__skeletons is not None:
-                            data: np.ndarray = np.frombuffer(
-                                bytes(repr(self.__skeletons), "utf-8"), dtype=np.uint8
-                            )
+                        if skeletons is not None:
+                            data: np.ndarray = np.frombuffer(bytes(repr(skeletons), "utf-8"), dtype=np.uint8)
                             data_msg: DataMessage = DataMessage(len(data))
                             np.copyto(data_msg.get_data(), data)
 
