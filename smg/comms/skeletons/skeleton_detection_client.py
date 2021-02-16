@@ -78,6 +78,13 @@ class SkeletonDetectionClient:
 
         return connection_ok
 
+    def detect_skeletons(self, frame_idx: int, image: np.ndarray,
+                         world_from_camera: np.ndarray) -> Optional[List[Skeleton]]:
+        if self.begin_detection(frame_idx, image, world_from_camera):
+            return self.end_detection(frame_idx)
+        else:
+            return None
+
     def end_detection(self, frame_idx: int, *, blocking: bool = True) -> Optional[List[Skeleton]]:
         data_size_msg: SimpleMessage[int] = SimpleMessage[int]()
         connection_ok: bool = \
