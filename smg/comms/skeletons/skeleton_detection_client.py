@@ -5,7 +5,8 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import AckMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, SocketUtil
+from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, \
+    SimpleMessage, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
 
@@ -22,7 +23,7 @@ class SkeletonDetectionClient:
         try:
             self.__sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.__sock.connect(endpoint)
-            self.__sock.settimeout(timeout)
+            # self.__sock.settimeout(timeout)
             self.__alive = True
         except ConnectionRefusedError:
             raise RuntimeError("Error: Could not connect to the service")
@@ -77,12 +78,22 @@ class SkeletonDetectionClient:
         return connection_ok
 
     def end_detection(self, frame_idx: int, *, blocking: bool = True) -> Optional[List[Skeleton]]:
-        connection_ok: bool = True
-        connection_ok = connection_ok and SocketUtil.write_message(
-            self.__sock, SkeletonControlMessage.end_detection(frame_idx + 1, blocking=blocking)
-        )
+        data_size_msg: SimpleMessage[int] = SimpleMessage[int]()
+        connection_ok: bool = \
+            SocketUtil.write_message(
+                self.__sock, SkeletonControlMessage.end_detection(frame_idx + 1, blocking=blocking)
+            ) and \
+            SocketUtil.read_message(self.__sock, data_size_msg)
 
-        # TODO: Receive the list of skeletons.
+        if connection_ok:
+            data_msg: DataMessage = DataMessage(data_size_msg.extract_value())
+            connection_ok = SocketUtil.read_message(self.__sock, data_msg)
+            if connection_ok:
+                data: str = str(data_msg.get_data().tobytes(), "utf-8")
+                skeletons: List[Skeleton] = eval(
+                    data, {'array': np.array, 'Keypoint': Skeleton.Keypoint, 'Skeleton': Skeleton}
+                )
+                return skeletons
 
         return []
 
