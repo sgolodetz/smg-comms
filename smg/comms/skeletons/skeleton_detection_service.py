@@ -1,10 +1,12 @@
+import numpy as np
 import socket
 import threading
 
 from select import select
 from typing import Callable, Optional
 
-from ..base import FrameMessage
+from ..base import FrameMessage, SimpleMessage, SocketUtil
+from .skeleton_control_message import SkeletonControlMessage
 
 
 class SkeletonDetectionService:
@@ -71,7 +73,21 @@ class SkeletonDetectionService:
 
         while not self.__should_terminate.is_set():
             if client_sock is not None:
-                pass
+                control_msg: SkeletonControlMessage = SkeletonControlMessage()
+                connection_ok: bool = SocketUtil.read_message(client_sock, control_msg)
+                if connection_ok:
+                    value: int = control_msg.extract_value()
+                    if value == SkeletonControlMessage.BEGIN_DETECTION:
+                        print("Begin Detection")
+                        # TODO: Receive the actual image and store the detection request.
+                        token: int = 12345  # TODO: Generate a token.
+                        connection_ok = connection_ok and SocketUtil.write_message(
+                            client_sock, SimpleMessage[int](token)
+                        )
+                    else:
+                        token, blocking = np.abs(value), value >= 0
+                        print(f"End Detection: Token = {token}, blocking = {blocking}")
+                        # TODO: Check whether the detection request has been processed yet.
             else:
                 timeout: float = 0.1
                 readable, _, _ = select([server_sock], [], [], timeout)

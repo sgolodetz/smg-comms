@@ -43,7 +43,7 @@ class SimpleMessage(Message, Generic[T]):
             # the type of T explicitly.
             t = TypeUtil.get_type_variable(self)
 
-        if t is int:
+        if issubclass(t, int):
             self.__fmt = "i"
             size = 4
         else:

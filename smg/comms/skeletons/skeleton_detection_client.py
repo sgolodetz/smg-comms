@@ -5,7 +5,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import FrameMessage, SocketUtil
+from ..base import FrameMessage, SimpleMessage, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
 
@@ -45,15 +45,31 @@ class SkeletonDetectionClient:
 
     # PUBLIC METHODS
 
-    def begin_detection(self, image: np.ndarray) -> str:
+    def begin_detection(self, image: np.ndarray) -> Optional[int]:
         connection_ok: bool = True
         connection_ok = connection_ok and SocketUtil.write_message(
             self.__sock, SkeletonControlMessage.begin_detection()
         )
-        return ""
 
-    def end_detection(self, request_token: str) -> Optional[List[Skeleton]]:
-        pass
+        # TODO: Send the actual frame message.
+
+        token_msg: SimpleMessage[int] = SimpleMessage[int]()
+        connection_ok = connection_ok and SocketUtil.read_message(self.__sock, token_msg)
+
+        if connection_ok:
+            return token_msg.extract_value()
+        else:
+            return None
+
+    def end_detection(self, token: int, *, blocking: bool = True) -> Optional[List[Skeleton]]:
+        connection_ok: bool = True
+        connection_ok = connection_ok and SocketUtil.write_message(
+            self.__sock, SkeletonControlMessage.end_detection(token, blocking=blocking)
+        )
+
+        # TODO: Receive the list of skeletons.
+
+        return []
 
     def terminate(self) -> None:
         """Tell the client to terminate."""
