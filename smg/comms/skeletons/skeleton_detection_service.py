@@ -7,7 +7,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import AckMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, SocketUtil
+from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
 

@@ -1,5 +1,6 @@
 from .message import Message
 from .calibration_message import CalibrationMessage
+from .data_message import DataMessage
 from .frame_header_message import FrameHeaderMessage
 from .frame_message import FrameMessage
 from .simple_message import SimpleMessage

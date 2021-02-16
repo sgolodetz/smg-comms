@@ -11,6 +11,8 @@ def main() -> None:
         world_from_camera: np.ndarray = np.eye(4)
         if client.begin_detection(frame_idx, image, world_from_camera):
             print(client.end_detection(frame_idx))
+        while True:
+            pass
 
 
 if __name__ == "__main__":
