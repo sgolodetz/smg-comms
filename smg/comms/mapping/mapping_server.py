@@ -223,7 +223,7 @@ class MappingServer:
     def __run_server(self) -> None:
         """Run the server."""
         # Set up the server socket and listen for connections.
-        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(("127.0.0.1", self.__port))
         server_sock.listen(5)
 
