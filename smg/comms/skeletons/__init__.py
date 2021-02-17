@@ -1,2 +1,2 @@
-from .skeleton_detection_client import SkeletonDetectionClient
+from .remote_skeleton_detector import RemoteSkeletonDetector
 from .skeleton_detection_service import SkeletonDetectionService

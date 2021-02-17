@@ -10,7 +10,7 @@ from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, RG
 from .skeleton_control_message import SkeletonControlMessage
 
 
-class SkeletonDetectionClient:
+class RemoteSkeletonDetector:
     """TODO"""
 
     # CONSTRUCTOR
@@ -31,17 +31,17 @@ class SkeletonDetectionClient:
     # DESTRUCTOR
 
     def __del__(self):
-        """Destroy the client."""
+        """Destroy the detector."""
         self.terminate()
 
     # SPECIAL METHODS
 
     def __enter__(self):
-        """No-op (needed to allow the client's lifetime to be managed by a with statement)."""
+        """No-op (needed to allow the detector's lifetime to be managed by a with statement)."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Destroy the client at the end of the with statement that's used to manage its lifetime."""
+        """Destroy the detector at the end of the with statement that's used to manage its lifetime."""
         self.terminate()
 
     # PUBLIC METHODS
