@@ -29,7 +29,7 @@ class SkeletonDetectionService:
         """
         self.__debug: bool = debug
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
-        self.__frame_processor: Callable[[np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
+        self.__frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
         self.__port: int = port
 
     # PUBLIC METHODS
