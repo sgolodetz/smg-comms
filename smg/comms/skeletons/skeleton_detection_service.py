@@ -6,23 +6,23 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, RGBDFrameReceiver, \
-    SimpleMessage, SocketUtil
+from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
+from ..base import RGBDFrameReceiver, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
 
 class SkeletonDetectionService:
-    """TODO"""
+    """A skeleton detection service to which detection requests can be made over a network."""
 
     # CONSTRUCTOR
 
     def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]],
                  port: int = 7852, *, frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
         """
-        TODO
+        Construct a skeleton detection service.
 
         :param frame_processor:     TODO
-        :param port:                TODO
+        :param port:                The port on which the service should listen for connections.
         :param frame_decompressor:  TODO
         """
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
