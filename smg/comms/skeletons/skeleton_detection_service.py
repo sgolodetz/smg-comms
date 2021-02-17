@@ -6,7 +6,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, RGBDFrameMessageUtil, \
+from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, RGBDFrameReceiver, \
     SimpleMessage, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
@@ -42,6 +42,7 @@ class SkeletonDetectionService:
 
         client_sock: Optional[socket.SocketType] = None
         connection_ok: bool = True
+        receiver: RGBDFrameReceiver = RGBDFrameReceiver()
         skeletons: Optional[List[Skeleton]] = None
 
         while connection_ok:
@@ -70,19 +71,20 @@ class SkeletonDetectionService:
 
                             # If that succeeds:
                             if connection_ok:
+                                # Send an acknowledgement to the client.
+                                connection_ok = SocketUtil.write_message(client_sock, AckMessage())
+
                                 # Decompress the frame as necessary.
                                 decompressed_frame_msg: FrameMessage = frame_msg
                                 if self.__frame_decompressor is not None:
                                     decompressed_frame_msg = self.__frame_decompressor(frame_msg)
 
                                 # TODO: Comment here.
-                                frame_idx, colour_image, depth_image, world_from_camera = \
-                                    RGBDFrameMessageUtil.extract_frame_data(decompressed_frame_msg)
+                                receiver(decompressed_frame_msg)
 
-                                # Send an acknowledgement to the client.
-                                connection_ok = SocketUtil.write_message(client_sock, AckMessage())
-
-                                skeletons = self.__frame_processor(colour_image, depth_image, world_from_camera)
+                                skeletons = self.__frame_processor(
+                                    receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
+                                )
                     else:
                         frame_idx, blocking = np.abs(value) - 1, value >= 0
                         print(f"End Detection: Frame Index = {frame_idx}, blocking = {blocking}")
