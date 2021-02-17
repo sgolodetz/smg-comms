@@ -17,14 +17,17 @@ class SkeletonDetectionService:
     # CONSTRUCTOR
 
     def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]],
-                 port: int = 7852, *, frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
+                 port: int = 7852, *, debug: bool = False,
+                 frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
         """
         Construct a skeleton detection service.
 
         :param frame_processor:     The function to use to detect skeletons in frames.
         :param port:                The port on which the service should listen for connections.
+        :param debug:               Whether to print out debug messages.
         :param frame_decompressor:  An optional function to use to decompress received frames.
         """
+        self.__debug: bool = debug
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
         self.__frame_processor: Callable[[np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
         self.__port: int = port
@@ -33,12 +36,12 @@ class SkeletonDetectionService:
 
     def run(self) -> None:
         """Run the service."""
-        # Set up the server socket and listen for connections.
+        # Set up the server socket and listen for a connection.
         server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(("127.0.0.1", self.__port))
         server_sock.listen(5)
 
-        print(f"Listening for connections on 127.0.0.1:{self.__port}...")
+        print(f"Listening for a connection on 127.0.0.1:{self.__port}...")
 
         client_sock: Optional[socket.SocketType] = None
 
@@ -68,7 +71,8 @@ class SkeletonDetectionService:
 
                 # If this is the start of a detection:
                 if value == SkeletonControlMessage.BEGIN_DETECTION:
-                    print("Begin Detection")
+                    if self.__debug:
+                        print("Begin Detection")
 
                     # Try to read a frame header message.
                     max_images: int = 2
@@ -104,7 +108,8 @@ class SkeletonDetectionService:
 
                 # Otherwise, if this is the end of a detection:
                 else:
-                    print(f"End Detection")
+                    if self.__debug:
+                        print(f"End Detection")
 
                     # Assuming the skeletons have previously been detected (if not, it's because the client has
                     # erroneously called end_detection prior to begin_detection):
