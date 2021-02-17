@@ -6,9 +6,9 @@ from ..base import SimpleMessage
 
 
 class SkeletonControlMessage(SimpleMessage[int]):
-    """TODO"""
+    """A message controlling the type of interaction a client wants to have with a skeleton detection service."""
 
-    # ENUMERATION VALUES
+    # CONSTANTS
 
     BEGIN_DETECTION: int = 0
     END_DETECTION: int = 1
@@ -17,9 +17,10 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     def __init__(self, value: Optional[int] = None):
         """
-        TODO
+        Construct a skeleton control message.
 
-        :param value:   TODO
+        :param value:   An integer value specifying the type of interaction a client wants to have with a skeleton
+                        detection service.
         """
         super().__init__(value, int)
 
@@ -28,9 +29,19 @@ class SkeletonControlMessage(SimpleMessage[int]):
     # noinspection PyUnresolvedReferences
     @staticmethod
     def begin_detection() -> SkeletonControlMessage:
+        """
+        Make a 'begin detection' control message.
+
+        :return:    The control message.
+        """
         return SkeletonControlMessage(SkeletonControlMessage.BEGIN_DETECTION)
 
     # noinspection PyUnresolvedReferences
     @staticmethod
     def end_detection() -> SkeletonControlMessage:
+        """
+        Make an 'end detection' control message.
+
+        :return:    The control message.
+        """
         return SkeletonControlMessage(SkeletonControlMessage.END_DETECTION)
