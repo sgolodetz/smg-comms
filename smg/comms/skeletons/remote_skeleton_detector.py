@@ -56,21 +56,22 @@ class RemoteSkeletonDetector:
 
     # PUBLIC METHODS
 
-    def begin_detection(self, image: np.ndarray, world_from_camera: np.ndarray) -> bool:
+    def begin_detection(self, colour_image: np.ndarray, world_from_camera: np.ndarray) -> bool:
         """
-        Try to request that the remote skeleton detection service detect any skeletons in the specified image.
+        Try to request that the remote skeleton detection service detect any skeletons in the specified colour image.
 
         .. note::
             This will return False iff the connection drops before the request can be completed.
 
-        :param image:               The image.
+        :param colour_image:        The colour image.
         :param world_from_camera:   The pose from which the image was captured.
         :return:                    True, if the detection was successfully requested, or False otherwise.
         """
         # Make the frame message.
         dummy_frame_idx: int = -1
+        dummy_depth_image: np.ndarray = np.zeros(colour_image.shape[:2], dtype=np.uint16)
         frame_msg: FrameMessage = RGBDFrameMessageUtil.make_frame_message(
-            dummy_frame_idx, image, np.zeros(image.shape[:2], dtype=np.uint16), world_from_camera
+            dummy_frame_idx, colour_image, dummy_depth_image, world_from_camera
         )
 
         # If requested, compress the frame prior to transmission.
@@ -98,15 +99,15 @@ class RemoteSkeletonDetector:
 
         return connection_ok
 
-    def detect_skeletons(self, image: np.ndarray, world_from_camera: np.ndarray) -> Optional[List[Skeleton]]:
+    def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray) -> Optional[List[Skeleton]]:
         """
-        Try to use the remote skeleton detection service to detect any skeletons in the specified image.
+        Try to use the remote skeleton detection service to detect any skeletons in the specified colour image.
 
-        :param image:               The image.
+        :param colour_image:        The colour image.
         :param world_from_camera:   The pose from which the image was captured.
         :return:                    A list of skeletons, if the detection succeeded, or None otherwise.
         """
-        if self.begin_detection(image, world_from_camera):
+        if self.begin_detection(colour_image, world_from_camera):
             return self.end_detection()
         else:
             return None
