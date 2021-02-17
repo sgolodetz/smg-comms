@@ -80,16 +80,14 @@ class RemoteSkeletonDetector:
     def detect_skeletons(self, frame_idx: int, image: np.ndarray,
                          world_from_camera: np.ndarray) -> Optional[List[Skeleton]]:
         if self.begin_detection(frame_idx, image, world_from_camera):
-            return self.end_detection(frame_idx)
+            return self.end_detection()
         else:
             return None
 
-    def end_detection(self, frame_idx: int, *, blocking: bool = True) -> Optional[List[Skeleton]]:
+    def end_detection(self) -> Optional[List[Skeleton]]:
         data_size_msg: SimpleMessage[int] = SimpleMessage[int]()
         connection_ok: bool = \
-            SocketUtil.write_message(
-                self.__sock, SkeletonControlMessage.end_detection(frame_idx + 1, blocking=blocking)
-            ) and \
+            SocketUtil.write_message(self.__sock, SkeletonControlMessage.end_detection()) and \
             SocketUtil.read_message(self.__sock, data_size_msg)
 
         if connection_ok:
@@ -102,7 +100,7 @@ class RemoteSkeletonDetector:
                 )
                 return skeletons
 
-        return []
+        return None
 
     def terminate(self) -> None:
         """Tell the client to terminate."""

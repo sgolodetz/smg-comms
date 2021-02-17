@@ -104,11 +104,12 @@ class SkeletonDetectionService:
 
                 # Otherwise, if this is the end of a detection:
                 else:
-                    # TODO: Get rid of the "blocking" nonsense.
-                    frame_idx, blocking = np.abs(value) - 1, value >= 0
-                    print(f"End Detection: Frame Index = {frame_idx}, blocking = {blocking}")
+                    print(f"End Detection")
 
+                    # Assuming the skeletons have previously been detected (if not, it's because the client has
+                    # erroneously called end_detection prior to begin_detection):
                     if skeletons is not None:
+                        # Send them across to the client.
                         data: np.ndarray = np.frombuffer(bytes(repr(skeletons), "utf-8"), dtype=np.uint8)
                         data_msg: DataMessage = DataMessage(len(data))
                         np.copyto(data_msg.get_data(), data)
@@ -116,3 +117,7 @@ class SkeletonDetectionService:
                         connection_ok = \
                             SocketUtil.write_message(client_sock, SimpleMessage[int](len(data))) and \
                             SocketUtil.write_message(client_sock, data_msg)
+
+                        # Now that we've sent the skeletons, clear them so that they don't get sent to the client
+                        # again erroneously in future frames.
+                        skeletons = None

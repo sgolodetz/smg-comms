@@ -11,6 +11,7 @@ class SkeletonControlMessage(SimpleMessage[int]):
     # ENUMERATION VALUES
 
     BEGIN_DETECTION: int = 0
+    END_DETECTION: int = 1
 
     # CONSTRUCTOR
 
@@ -31,5 +32,5 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # noinspection PyUnresolvedReferences
     @staticmethod
-    def end_detection(frame_idx: int, *, blocking: bool) -> SkeletonControlMessage:
-        return SkeletonControlMessage(frame_idx if blocking else -frame_idx)
+    def end_detection() -> SkeletonControlMessage:
+        return SkeletonControlMessage(SkeletonControlMessage.END_DETECTION)
