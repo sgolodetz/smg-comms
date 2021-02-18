@@ -116,7 +116,7 @@ class RemoteSkeletonDetector:
         """
         Try to request that the remote skeleton detection service send across any skeletons that it has just detected.
 
-        :return:    The skeletons, if successful, or None otherwise.
+        :return:    A list of skeletons, if successful, or None otherwise.
         """
         # First send the end detection message, then read the size of the data that the service wants to send across.
         data_size_msg: SimpleMessage[int] = SimpleMessage[int]()
