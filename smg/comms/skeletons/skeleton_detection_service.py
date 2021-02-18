@@ -12,7 +12,7 @@ from .skeleton_control_message import SkeletonControlMessage
 
 
 class SkeletonDetectionService:
-    """A skeleton detection service to which detection requests can be made over a network."""
+    """A skeleton detection service to which a single client can make detection requests over a network."""
 
     # CONSTRUCTOR
 
@@ -23,7 +23,7 @@ class SkeletonDetectionService:
         Construct a skeleton detection service.
 
         :param frame_processor:     The function to use to detect skeletons in frames.
-        :param port:                The port on which the service should listen for connections.
+        :param port:                The port on which the service should listen for a connection.
         :param debug:               Whether to print out debug messages.
         :param frame_decompressor:  An optional function to use to decompress received frames.
         """

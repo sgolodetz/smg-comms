@@ -143,7 +143,7 @@ class RemoteSkeletonDetector:
         return None
 
     def terminate(self) -> None:
-        """Tell the client to terminate."""
+        """Tell the detector to terminate."""
         if self.__alive:
             self.__sock.shutdown(socket.SHUT_RDWR)
             self.__sock.close()
