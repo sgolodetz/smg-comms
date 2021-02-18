@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import struct
 
-from typing import Tuple
+from typing import List, Tuple
 
 from .calibration_message import CalibrationMessage
 from .frame_message import FrameMessage
@@ -126,3 +126,22 @@ class RGBDFrameMessageUtil:
         calib_msg.set_element_byte_sizes([struct.calcsize("<B"), struct.calcsize("<H")])
 
         return calib_msg
+
+    @staticmethod
+    def make_frame_message(frame_idx: int, rgb_image: np.ndarray, depth_image: np.ndarray,
+                           pose: np.ndarray) -> FrameMessage:
+        """
+        Make an uncompressed RGB-D frame message and fill it with the specified data.
+
+        :param frame_idx:   The frame index.
+        :param rgb_image:   The RGB-D image.
+        :param depth_image: The depth image (with dtype np.uint16).
+        :param pose:        The pose.
+        :return:            The uncompressed RGB-D frame message.
+        """
+        image_shapes: List[Tuple[int, int, int]] = [rgb_image.shape, depth_image.shape + (1,)]
+        element_byte_sizes: List[int] = [struct.calcsize("<B"), struct.calcsize("<H")]
+        image_byte_sizes: List[int] = [np.prod(s) * b for s, b in zip(image_shapes, element_byte_sizes)]
+        msg: FrameMessage = FrameMessage(image_shapes, image_byte_sizes)
+        RGBDFrameMessageUtil.fill_frame_message(frame_idx, rgb_image, depth_image, pose, msg)
+        return msg

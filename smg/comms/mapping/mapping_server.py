@@ -32,7 +32,7 @@ class MappingServer:
         self.__next_client_id: int = 0
         self.__pool_empty_strategy: PooledQueue.EPoolEmptyStrategy = pool_empty_strategy
         self.__port: int = port
-        self.__server_thread: threading.Thread = threading.Thread(target=self.__run_server)
+        self.__server_thread: Optional[threading.Thread] = None
         self.__should_terminate: threading.Event = threading.Event()
 
         self.__lock: threading.Lock = threading.Lock()
@@ -148,14 +148,17 @@ class MappingServer:
 
     def start(self) -> None:
         """Start the server."""
-        self.__server_thread.start()
+        with self.__lock:
+            self.__server_thread = threading.Thread(target=self.__run_server)
+            self.__server_thread.start()
 
     def terminate(self) -> None:
         """Tell the server to terminate."""
         with self.__lock:
             if not self.__should_terminate.is_set():
                 self.__should_terminate.set()
-                self.__server_thread.join()
+                if self.__server_thread is not None:
+                    self.__server_thread.join()
 
     # PROTECTED METHODS
 
@@ -223,7 +226,7 @@ class MappingServer:
     def __run_server(self) -> None:
         """Run the server."""
         # Set up the server socket and listen for connections.
-        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.bind(("127.0.0.1", self.__port))
         server_sock.listen(5)
 
