@@ -1,10 +1,13 @@
 import numpy as np
 import socket
 
+from OpenGL.GL import *
 from select import select
 from typing import Callable, List, Optional, Tuple
 
-from smg.skeletons import Skeleton
+from smg.opengl import OpenGLFrameBuffer, OpenGLMatrixContext, OpenGLUtil
+from smg.rigging.helpers import CameraPoseConverter
+from smg.skeletons import Skeleton, SkeletonRenderer
 
 from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
 from ..base import RGBDFrameReceiver, SocketUtil
@@ -28,6 +31,7 @@ class SkeletonDetectionService:
         :param frame_decompressor:  An optional function to use to decompress received frames.
         """
         self.__debug: bool = debug
+        self.__framebuffer: Optional[OpenGLFrameBuffer] = None
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
         self.__frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
         self.__port: int = port
@@ -109,6 +113,39 @@ class SkeletonDetectionService:
                                 skeletons = self.__frame_processor(
                                     receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
                                 )
+
+                                # If the OpenGL framebuffer hasn't been constructed yet, construct it now.
+                                height, width = receiver.get_depth_image().shape
+                                if self.__framebuffer is None:
+                                    self.__framebuffer = OpenGLFrameBuffer(width, height)
+
+                                # Render a mask of the skeletons' bounding shapes to the framebuffer.
+                                with self.__framebuffer:
+                                    OpenGLUtil.set_viewport((0.0, 0.0), (1.0, 1.0), (width, height))
+
+                                    # TODO: Comment here.
+                                    glClearColor(0.0, 0.0, 0.0, 1.0)
+                                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+                                    # Set the projection matrix.
+                                    intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
+                                    with OpenGLMatrixContext(GL_PROJECTION, lambda: OpenGLUtil.set_projection_matrix(
+                                        intrinsics, width, height
+                                    )):
+                                        # Set the model-view matrix.
+                                        with OpenGLMatrixContext(GL_MODELVIEW, lambda: OpenGLUtil.load_matrix(
+                                            CameraPoseConverter.pose_to_modelview(np.linalg.inv(receiver.get_pose()))
+                                        )):
+                                            glColor3f(1.0, 1.0, 1.0)
+                                            for skeleton in skeletons:
+                                                SkeletonRenderer.render_bounding_shapes(skeleton)
+                                            buffer: bytes = glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE)
+                                            mask: np.ndarray = np.frombuffer(
+                                                buffer, dtype=np.uint8
+                                            ).reshape((height, width, 3))[::-1, :]
+                                            import cv2
+                                            cv2.imshow("Mask", mask)
+                                            cv2.waitKey(1)
 
                     # Otherwise, if this is the end of a detection:
                     else:
