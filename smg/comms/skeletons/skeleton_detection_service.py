@@ -114,38 +114,15 @@ class SkeletonDetectionService:
                                     receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
                                 )
 
-                                # If the OpenGL framebuffer hasn't been constructed yet, construct it now.
+                                # FIXME
                                 height, width = receiver.get_depth_image().shape
-                                if self.__framebuffer is None:
-                                    self.__framebuffer = OpenGLFrameBuffer(width, height)
-
-                                # Render a mask of the skeletons' bounding shapes to the framebuffer.
-                                with self.__framebuffer:
-                                    OpenGLUtil.set_viewport((0.0, 0.0), (1.0, 1.0), (width, height))
-
-                                    # TODO: Comment here.
-                                    glClearColor(0.0, 0.0, 0.0, 1.0)
-                                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-                                    # Set the projection matrix.
-                                    intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
-                                    with OpenGLMatrixContext(GL_PROJECTION, lambda: OpenGLUtil.set_projection_matrix(
-                                        intrinsics, width, height
-                                    )):
-                                        # Set the model-view matrix.
-                                        with OpenGLMatrixContext(GL_MODELVIEW, lambda: OpenGLUtil.load_matrix(
-                                            CameraPoseConverter.pose_to_modelview(np.linalg.inv(receiver.get_pose()))
-                                        )):
-                                            glColor3f(1.0, 1.0, 1.0)
-                                            for skeleton in skeletons:
-                                                SkeletonRenderer.render_bounding_shapes(skeleton)
-                                            buffer: bytes = glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE)
-                                            mask: np.ndarray = np.frombuffer(
-                                                buffer, dtype=np.uint8
-                                            ).reshape((height, width, 3))[::-1, :]
-                                            import cv2
-                                            cv2.imshow("Mask", mask)
-                                            cv2.waitKey(1)
+                                intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
+                                mask: np.ndarray = self.__render_skeletons_mask(
+                                    skeletons, receiver.get_pose(), intrinsics, width, height
+                                )
+                                import cv2
+                                cv2.imshow("Mask", mask)
+                                cv2.waitKey(1)
 
                     # Otherwise, if this is the end of a detection:
                     else:
@@ -156,6 +133,7 @@ class SkeletonDetectionService:
                         # erroneously called end_detection prior to begin_detection):
                         if skeletons is not None:
                             # Send them across to the client.
+                            # noinspection PyTypeChecker
                             data: np.ndarray = np.frombuffer(bytes(repr(skeletons), "utf-8"), dtype=np.uint8)
                             data_msg: DataMessage = DataMessage(len(data))
                             np.copyto(data_msg.get_data(), data)
@@ -167,3 +145,53 @@ class SkeletonDetectionService:
                             # Now that we've sent the skeletons, clear them so that they don't get sent to the client
                             # again erroneously in future frames.
                             skeletons = None
+
+    # PRIVATE METHODS
+
+    def __render_skeletons_mask(self, skeletons: List[Skeleton], world_from_camera: np.ndarray,
+                                intrinsics: Tuple[float, float, float, float], width: int, height: int) -> np.ndarray:
+        """
+        TODO
+
+        :param skeletons:           TODO
+        :param world_from_camera:   TODO
+        :param intrinsics:          TODO
+        :param width:               TODO
+        :param height:              TODO
+        :return:                    TODO
+        """
+        # If the OpenGL framebuffer hasn't been constructed yet, construct it now.
+        # TODO: Support image size changes.
+        if self.__framebuffer is None:
+            self.__framebuffer = OpenGLFrameBuffer(width, height)
+
+        # Render a mask of the skeletons' bounding shapes to the framebuffer.
+        with self.__framebuffer:
+            # Set the viewport to encompass the whole framebuffer.
+            OpenGLUtil.set_viewport((0.0, 0.0), (1.0, 1.0), (width, height))
+
+            # Clear the background to black.
+            glClearColor(0.0, 0.0, 0.0, 1.0)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+            # Set the projection matrix.
+            with OpenGLMatrixContext(GL_PROJECTION, lambda: OpenGLUtil.set_projection_matrix(
+                intrinsics, width, height
+            )):
+                # Set the model-view matrix.
+                with OpenGLMatrixContext(GL_MODELVIEW, lambda: OpenGLUtil.load_matrix(
+                    CameraPoseConverter.pose_to_modelview(np.linalg.inv(world_from_camera))
+                )):
+                    # Render the skeletons' bounding shapes in white.
+                    glColor3f(1.0, 1.0, 1.0)
+                    for skeleton in skeletons:
+                        SkeletonRenderer.render_bounding_shapes(skeleton)
+
+                    # Make a binary mask from the contents of the framebuffer, and return it.
+                    # TODO: Make this a function in OpenGLUtil.
+                    buffer: bytes = glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE)
+                    mask: np.ndarray = np.frombuffer(
+                        buffer, dtype=np.uint8
+                    ).reshape((height, width, 3))[::-1, :]
+
+                    return mask[:, :, 0]
