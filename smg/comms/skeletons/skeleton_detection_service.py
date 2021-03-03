@@ -9,7 +9,7 @@ from smg.opengl import OpenGLFrameBuffer, OpenGLMatrixContext, OpenGLUtil
 from smg.rigging.helpers import CameraPoseConverter
 from smg.skeletons import Skeleton, SkeletonRenderer
 
-from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
+from ..base import AckMessage, CalibrationMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
 from ..base import RGBDFrameReceiver, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
@@ -34,6 +34,7 @@ class SkeletonDetectionService:
         self.__framebuffer: Optional[OpenGLFrameBuffer] = None
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
         self.__frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
+        self.__intrinsics: Optional[Tuple[float, float, float, float]] = None
         self.__port: int = port
 
     # PUBLIC METHODS
@@ -116,18 +117,18 @@ class SkeletonDetectionService:
 
                                 # FIXME
                                 height, width = receiver.get_depth_image().shape
-                                intrinsics: Tuple[float, float, float, float] = (532.5694641250893, 531.5410880910171, 320.0, 240.0)
-                                mask: np.ndarray = self.__render_skeletons_mask(
-                                    skeletons, receiver.get_pose(), intrinsics, width, height
-                                )
-                                import cv2
-                                cv2.imshow("Mask", mask)
-                                cv2.waitKey(1)
+                                if self.__intrinsics is not None:
+                                    mask: np.ndarray = self.__render_skeletons_mask(
+                                        skeletons, receiver.get_pose(), width, height
+                                    )
+                                    import cv2
+                                    cv2.imshow("Mask", mask)
+                                    cv2.waitKey(1)
 
                     # Otherwise, if this is the end of a detection:
-                    else:
+                    elif value == SkeletonControlMessage.END_DETECTION:
                         if self.__debug:
-                            print(f"End Detection")
+                            print("End Detection")
 
                         # Assuming the skeletons have previously been detected (if not, it's because the client has
                         # erroneously called end_detection prior to begin_detection):
@@ -146,16 +147,32 @@ class SkeletonDetectionService:
                             # again erroneously in future frames.
                             skeletons = None
 
+                    # Otherwise, if the calibration is being set:
+                    elif value == SkeletonControlMessage.SET_CALIBRATION:
+                        if self.__debug:
+                            print("Set Calibration")
+
+                        # Try to read a calibration message.
+                        calib_msg: CalibrationMessage = CalibrationMessage()
+                        connection_ok = SocketUtil.read_message(client_sock, calib_msg)
+
+                        # If that succeeds:
+                        if connection_ok:
+                            # Store the camera intrinsics for later.
+                            self.__intrinsics = calib_msg.get_intrinsics()[0]
+
+                            # Send an acknowledgement message.
+                            connection_ok = SocketUtil.write_message(client_sock, AckMessage())
+
     # PRIVATE METHODS
 
     def __render_skeletons_mask(self, skeletons: List[Skeleton], world_from_camera: np.ndarray,
-                                intrinsics: Tuple[float, float, float, float], width: int, height: int) -> np.ndarray:
+                                width: int, height: int) -> np.ndarray:
         """
         TODO
 
         :param skeletons:           TODO
         :param world_from_camera:   TODO
-        :param intrinsics:          TODO
         :param width:               TODO
         :param height:              TODO
         :return:                    TODO
@@ -176,7 +193,7 @@ class SkeletonDetectionService:
 
             # Set the projection matrix.
             with OpenGLMatrixContext(GL_PROJECTION, lambda: OpenGLUtil.set_projection_matrix(
-                intrinsics, width, height
+                self.__intrinsics, width, height
             )):
                 # Set the model-view matrix.
                 with OpenGLMatrixContext(GL_MODELVIEW, lambda: OpenGLUtil.load_matrix(

@@ -5,7 +5,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
+from ..base import AckMessage, CalibrationMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
 from ..base import RGBDFrameMessageUtil, SocketUtil
 from .skeleton_control_message import SkeletonControlMessage
 
@@ -141,6 +141,27 @@ class RemoteSkeletonDetector:
 
         # If anything goes wrong, return None.
         return None
+
+    def set_calibration(self, image_size: Tuple[int, int], intrinsics: Tuple[float, float, float, float]) -> bool:
+        """
+        Try to send the camera calibration to the remote skeleton detection service.
+
+        :param image_size:  The image size.
+        :param intrinsics:  The camera intrinsics, as an (fx, fy, cx, cy) tuple.
+        :return:            True, if the camera calibration was successfully sent, or False otherwise.
+        """
+        calib_msg: CalibrationMessage = RGBDFrameMessageUtil.make_calibration_message(
+            image_size, image_size, intrinsics, intrinsics
+        )
+
+        ack_msg: AckMessage = AckMessage()
+
+        connection_ok: bool = \
+            SocketUtil.write_message(self.__sock, SkeletonControlMessage.set_calibration()) and \
+            SocketUtil.write_message(self.__sock, calib_msg) and \
+            SocketUtil.read_message(self.__sock, ack_msg)
+
+        return connection_ok
 
     def terminate(self) -> None:
         """Tell the detector to terminate."""
