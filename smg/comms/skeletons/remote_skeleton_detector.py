@@ -5,8 +5,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.skeletons import Skeleton
 
-from ..base import AckMessage, CalibrationMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
-from ..base import RGBDFrameMessageUtil, SocketUtil
+from ..base import *
 from .skeleton_control_message import SkeletonControlMessage
 
 
@@ -26,6 +25,7 @@ class RemoteSkeletonDetector:
         """
         self.__alive: bool = False
         self.__frame_compressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_compressor
+        self.__people_mask_shape: Optional[Tuple[int, int]] = None
 
         try:
             # Try to connect to the service.
@@ -97,6 +97,10 @@ class RemoteSkeletonDetector:
             SocketUtil.write_message(self.__sock, compressed_frame_msg) and \
             SocketUtil.read_message(self.__sock, ack_msg)
 
+        # If that succeeded, store the expected people mask shape for later.
+        if connection_ok:
+            self.__people_mask_shape = colour_image.shape[:2]
+
         return connection_ok
 
     def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray) -> Optional[List[Skeleton]]:
@@ -118,7 +122,17 @@ class RemoteSkeletonDetector:
 
         :return:    A list of skeletons, if successful, or None otherwise.
         """
-        # First send the end detection message, then read the size of the data that the service wants to send across.
+        # Make a local copy of the expected people mask shape, if any, and reset the global one.
+        people_mask_shape: Optional[Tuple[int, int]] = self.__people_mask_shape
+        self.__people_mask_shape = None
+
+        # If there isn't an expected people mask shape, there wasn't a previous successful call to
+        # begin_detection, so early out.
+        if people_mask_shape is None:
+            return None
+
+        # First send the end detection message, then read the size of the skeleton data that the service
+        # wants to send across.
         data_size_msg: SimpleMessage[int] = SimpleMessage[int]()
         connection_ok: bool = \
             SocketUtil.write_message(self.__sock, SkeletonControlMessage.end_detection()) and \
@@ -126,17 +140,26 @@ class RemoteSkeletonDetector:
 
         # If that succeeds:
         if connection_ok:
-            # Read the data itself.
+            # Read the skeleton data itself, as well as the people mask.
             data_msg: DataMessage = DataMessage(data_size_msg.extract_value())
-            connection_ok = SocketUtil.read_message(self.__sock, data_msg)
+            mask_msg: BinaryMaskMessage = BinaryMaskMessage(people_mask_shape)
+            connection_ok = \
+                SocketUtil.read_message(self.__sock, data_msg) and \
+                SocketUtil.read_message(self.__sock, mask_msg)
 
             # If that succeeds:
             if connection_ok:
-                # Construct a list of skeletons from the data, and return it.
+                # Construct a list of skeletons from the data.
                 data: str = str(data_msg.get_data().tobytes(), "utf-8")
                 skeletons: List[Skeleton] = eval(
                     data, {'array': np.array, 'Keypoint': Skeleton.Keypoint, 'Skeleton': Skeleton}
                 )
+
+                # TEMPORARY: Show the people mask.
+                import cv2
+                cv2.imshow("Received People Mask", mask_msg.get_mask())
+                cv2.waitKey(1)
+
                 return skeletons
 
         # If anything goes wrong, return None.

@@ -1,4 +1,5 @@
 from .message import Message
+from .binary_mask_message import BinaryMaskMessage
 from .calibration_message import CalibrationMessage
 from .data_message import DataMessage
 from .frame_header_message import FrameHeaderMessage
