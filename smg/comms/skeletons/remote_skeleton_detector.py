@@ -103,24 +103,26 @@ class RemoteSkeletonDetector:
 
         return connection_ok
 
-    def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray) -> Optional[List[Skeleton]]:
+    def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray) \
+            -> Optional[Tuple[List[Skeleton], np.ndarray]]:
         """
         Try to use the remote skeleton detection service to detect any skeletons in the specified colour image.
 
         :param colour_image:        The colour image.
         :param world_from_camera:   The pose from which the image was captured.
-        :return:                    A list of skeletons, if the detection succeeded, or None otherwise.
+        :return:                    A tuple consisting of a list of skeletons and a people mask, if the detection
+                                    succeeded, or None otherwise.
         """
         if self.begin_detection(colour_image, world_from_camera):
             return self.end_detection()
         else:
             return None
 
-    def end_detection(self) -> Optional[List[Skeleton]]:
+    def end_detection(self) -> Optional[Tuple[List[Skeleton], np.ndarray]]:
         """
         Try to request that the remote skeleton detection service send across any skeletons that it has just detected.
 
-        :return:    A list of skeletons, if successful, or None otherwise.
+        :return:    A tuple consisting of a list of skeletons and a people mask, if successful, or None otherwise.
         """
         # Make a local copy of the expected people mask shape, if any, and reset the global one.
         people_mask_shape: Optional[Tuple[int, int]] = self.__people_mask_shape
@@ -155,12 +157,15 @@ class RemoteSkeletonDetector:
                     data, {'array': np.array, 'Keypoint': Skeleton.Keypoint, 'Skeleton': Skeleton}
                 )
 
+                # Extract the people mask.
+                people_mask: np.ndarray = mask_msg.get_mask()
+
                 # TEMPORARY: Show the people mask.
                 import cv2
-                cv2.imshow("Received People Mask", mask_msg.get_mask())
+                cv2.imshow("People Mask", people_mask)
                 cv2.waitKey(1)
 
-                return skeletons
+                return skeletons, people_mask
 
         # If anything goes wrong, return None.
         return None
