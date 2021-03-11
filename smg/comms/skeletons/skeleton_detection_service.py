@@ -212,10 +212,4 @@ class SkeletonDetectionService:
                         SkeletonRenderer.render_bounding_shapes(skeleton)
 
                     # Make a binary mask from the contents of the framebuffer, and return it.
-                    # TODO: Make this a function in OpenGLUtil.
-                    buffer: bytes = glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE)
-                    mask: np.ndarray = np.frombuffer(
-                        buffer, dtype=np.uint8
-                    ).reshape((height, width, 3))[::-1, :]
-
-                    return mask[:, :, 0]
+                    return OpenGLUtil.read_bgr_image(width, height)[:, :, 0]
