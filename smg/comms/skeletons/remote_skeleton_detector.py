@@ -160,11 +160,6 @@ class RemoteSkeletonDetector:
                 # Extract the people mask.
                 people_mask: np.ndarray = mask_msg.get_mask()
 
-                # TEMPORARY: Show the people mask.
-                import cv2
-                cv2.imshow("People Mask", people_mask)
-                cv2.waitKey(1)
-
                 return skeletons, people_mask
 
         # If anything goes wrong, return None.

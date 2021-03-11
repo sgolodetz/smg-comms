@@ -115,14 +115,11 @@ class SkeletonDetectionService:
                                     receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
                                 )
 
-                                # Render the people mask.
+                                # Render a mask for all the people in the frame.
                                 height, width = receiver.get_rgb_image().shape[:2]
                                 people_mask = self.__render_people_mask(
                                     skeletons, receiver.get_pose(), intrinsics, width, height
                                 )
-                                # import cv2
-                                # cv2.imshow("People Mask", people_mask)
-                                # cv2.waitKey(1)
 
                     # Otherwise, if this is the end of a detection:
                     elif value == SkeletonControlMessage.END_DETECTION:
@@ -174,21 +171,21 @@ class SkeletonDetectionService:
                              intrinsics: Optional[Tuple[float, float, float, float]],
                              width: int, height: int) -> np.ndarray:
         """
-        TODO
+        Render a mask for all the people detected in a frame.
 
-        :param skeletons:           TODO
-        :param world_from_camera:   TODO
-        :param intrinsics:          TODO
-        :param width:               TODO
-        :param height:              TODO
-        :return:                    TODO
+        :param skeletons:           The skeletons of the detected people.
+        :param world_from_camera:   The camera pose.
+        :param intrinsics:          The camera intrinsics, if available, as an (fx, fy, cx, cy) tuple.
+        :param width:               The image width.
+        :param height:              The image height.
+        :return:                    A mask for all the people detected in the frame.
         """
         # If the camera intrinsics aren't available, early out.
         if intrinsics is None:
             return np.zeros((height, width), dtype=np.uint8)
 
         # If the OpenGL framebuffer hasn't been constructed yet, construct it now.
-        # TODO: Support image size changes.
+        # FIXME: Support image size changes.
         if self.__framebuffer is None:
             self.__framebuffer = OpenGLFrameBuffer(width, height)
 
