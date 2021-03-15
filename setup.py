@@ -15,6 +15,7 @@ setup(
     packages=find_packages(include=["smg.comms", "smg.comms.*"]),
     include_package_data=True,
     install_requires=[
+        "smg-rigging",
         "smg-skeletons",
         "smg-utility"
     ],

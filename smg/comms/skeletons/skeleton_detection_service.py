@@ -1,13 +1,15 @@
 import numpy as np
 import socket
 
+from OpenGL.GL import *
 from select import select
 from typing import Callable, List, Optional, Tuple
 
-from smg.skeletons import Skeleton
+from smg.opengl import OpenGLFrameBuffer, OpenGLMatrixContext, OpenGLUtil
+from smg.rigging.helpers import CameraPoseConverter
+from smg.skeletons import Skeleton, SkeletonRenderer
 
-from ..base import AckMessage, DataMessage, FrameHeaderMessage, FrameMessage, SimpleMessage
-from ..base import RGBDFrameReceiver, SocketUtil
+from ..base import *
 from .skeleton_control_message import SkeletonControlMessage
 
 
@@ -28,6 +30,7 @@ class SkeletonDetectionService:
         :param frame_decompressor:  An optional function to use to decompress received frames.
         """
         self.__debug: bool = debug
+        self.__framebuffer: Optional[OpenGLFrameBuffer] = None
         self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
         self.__frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
         self.__port: int = port
@@ -60,6 +63,8 @@ class SkeletonDetectionService:
             # Once a client has connected, process any detection requests received from it. If the client
             # disconnects, keep the service running and loop back round to wait for another client.
             connection_ok: bool = True
+            intrinsics: Optional[Tuple[float, float, float, float]] = None
+            people_mask: Optional[np.ndarray] = None
             receiver: RGBDFrameReceiver = RGBDFrameReceiver()
             skeletons: Optional[List[Skeleton]] = None
 
@@ -110,23 +115,101 @@ class SkeletonDetectionService:
                                     receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
                                 )
 
+                                # Render a mask for all the people in the frame.
+                                height, width = receiver.get_rgb_image().shape[:2]
+                                people_mask = self.__render_people_mask(
+                                    skeletons, receiver.get_pose(), intrinsics, width, height
+                                )
+
                     # Otherwise, if this is the end of a detection:
-                    else:
+                    elif value == SkeletonControlMessage.END_DETECTION:
                         if self.__debug:
-                            print(f"End Detection")
+                            print("End Detection")
 
                         # Assuming the skeletons have previously been detected (if not, it's because the client has
                         # erroneously called end_detection prior to begin_detection):
                         if skeletons is not None:
                             # Send them across to the client.
+                            # noinspection PyTypeChecker
                             data: np.ndarray = np.frombuffer(bytes(repr(skeletons), "utf-8"), dtype=np.uint8)
                             data_msg: DataMessage = DataMessage(len(data))
                             np.copyto(data_msg.get_data(), data)
 
+                            mask_msg: BinaryMaskMessage = BinaryMaskMessage(people_mask.shape)
+                            mask_msg.set_mask(people_mask)
+
                             connection_ok = \
                                 SocketUtil.write_message(client_sock, SimpleMessage[int](len(data))) and \
-                                SocketUtil.write_message(client_sock, data_msg)
+                                SocketUtil.write_message(client_sock, data_msg) and \
+                                SocketUtil.write_message(client_sock, mask_msg)
 
                             # Now that we've sent the skeletons, clear them so that they don't get sent to the client
                             # again erroneously in future frames.
                             skeletons = None
+                            people_mask = None
+
+                    # Otherwise, if the calibration is being set:
+                    elif value == SkeletonControlMessage.SET_CALIBRATION:
+                        if self.__debug:
+                            print("Set Calibration")
+
+                        # Try to read a calibration message.
+                        calib_msg: CalibrationMessage = CalibrationMessage()
+                        connection_ok = SocketUtil.read_message(client_sock, calib_msg)
+
+                        # If that succeeds:
+                        if connection_ok:
+                            # Store the camera intrinsics for later.
+                            intrinsics = calib_msg.get_intrinsics()[0]
+
+                            # Send an acknowledgement message.
+                            connection_ok = SocketUtil.write_message(client_sock, AckMessage())
+
+    # PRIVATE METHODS
+
+    def __render_people_mask(self, skeletons: List[Skeleton], world_from_camera: np.ndarray,
+                             intrinsics: Optional[Tuple[float, float, float, float]],
+                             width: int, height: int) -> np.ndarray:
+        """
+        Render a mask for all the people detected in a frame.
+
+        :param skeletons:           The skeletons of the detected people.
+        :param world_from_camera:   The camera pose.
+        :param intrinsics:          The camera intrinsics, if available, as an (fx, fy, cx, cy) tuple.
+        :param width:               The image width.
+        :param height:              The image height.
+        :return:                    A mask for all the people detected in the frame.
+        """
+        # If the camera intrinsics aren't available, early out.
+        if intrinsics is None:
+            return np.zeros((height, width), dtype=np.uint8)
+
+        # If the OpenGL framebuffer hasn't been constructed yet, construct it now.
+        # FIXME: Support image size changes.
+        if self.__framebuffer is None:
+            self.__framebuffer = OpenGLFrameBuffer(width, height)
+
+        # Render a mask of the skeletons' bounding shapes to the framebuffer.
+        with self.__framebuffer:
+            # Set the viewport to encompass the whole framebuffer.
+            OpenGLUtil.set_viewport((0.0, 0.0), (1.0, 1.0), (width, height))
+
+            # Clear the background to black.
+            glClearColor(0.0, 0.0, 0.0, 1.0)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+            # Set the projection matrix.
+            with OpenGLMatrixContext(GL_PROJECTION, lambda: OpenGLUtil.set_projection_matrix(
+                intrinsics, width, height
+            )):
+                # Set the model-view matrix.
+                with OpenGLMatrixContext(GL_MODELVIEW, lambda: OpenGLUtil.load_matrix(
+                    CameraPoseConverter.pose_to_modelview(np.linalg.inv(world_from_camera))
+                )):
+                    # Render the skeletons' bounding shapes in white.
+                    glColor3f(1.0, 1.0, 1.0)
+                    for skeleton in skeletons:
+                        SkeletonRenderer.render_bounding_shapes(skeleton)
+
+                    # Make a binary mask from the contents of the framebuffer, and return it.
+                    return OpenGLUtil.read_bgr_image(width, height)[:, :, 0]

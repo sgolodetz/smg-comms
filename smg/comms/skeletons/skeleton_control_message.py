@@ -12,6 +12,7 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     BEGIN_DETECTION: int = 0
     END_DETECTION: int = 1
+    SET_CALIBRATION: int = 2
 
     # CONSTRUCTOR
 
@@ -45,3 +46,13 @@ class SkeletonControlMessage(SimpleMessage[int]):
         :return:    The control message.
         """
         return SkeletonControlMessage(SkeletonControlMessage.END_DETECTION)
+
+    # noinspection PyUnresolvedReferences
+    @staticmethod
+    def set_calibration() -> SkeletonControlMessage:
+        """
+        Make a 'set calibration' control message.
+
+        :return:    The control message.
+        """
+        return SkeletonControlMessage(SkeletonControlMessage.SET_CALIBRATION)
