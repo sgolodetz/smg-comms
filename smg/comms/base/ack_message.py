@@ -8,4 +8,4 @@ class AckMessage(SimpleMessage[int]):
 
     def __init__(self):
         """Construct an acknowledgement message."""
-        super().__init__(0, int)
+        super().__init__(int, 0)

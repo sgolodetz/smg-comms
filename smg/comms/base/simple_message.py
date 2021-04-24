@@ -3,8 +3,6 @@ import struct
 
 from typing import Generic, Optional, TypeVar
 
-from smg.utility import TypeUtil
-
 from .message import Message
 
 
@@ -20,7 +18,7 @@ class SimpleMessage(Message, Generic[T]):
 
     # CONSTRUCTOR
 
-    def __init__(self, value: Optional[T] = None, t: Optional[type] = None):
+    def __init__(self, t: type, value: Optional[T] = None):
         """
         Construct a simple message.
 
@@ -28,20 +26,14 @@ class SimpleMessage(Message, Generic[T]):
             It's not possible to infer the actual type of T here when this constructor is invoked by a
             derived constructor. Instead, the derived constructor must pass it in explicitly.
 
+        :param t:       The actual type of T.
         :param value:   An optional initial message value.
-        :param t:       The actual type of T (optional in some cases). If None, the class will try to infer it.
         """
         super().__init__()
 
         # noinspection PyUnusedLocal
         size: int = 0
         self.__fmt: str = ""
-
-        if t is None:
-            # Try to get the actual type of T. Note that this approach, which relies on pytypes, won't work when
-            # this constructor is invoked by a derived constructor, so subclasses of SimpleMessage must pass in
-            # the type of T explicitly.
-            t = TypeUtil.get_type_variable(self)
 
         if issubclass(t, int):
             self.__fmt = "i"

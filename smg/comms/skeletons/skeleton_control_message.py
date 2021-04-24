@@ -23,7 +23,7 @@ class SkeletonControlMessage(SimpleMessage[int]):
         :param value:   An integer value specifying the type of interaction a client wants to have with a skeleton
                         detection service.
         """
-        super().__init__(value, int)
+        super().__init__(int, value)
 
     # PUBLIC STATIC METHODS
 
