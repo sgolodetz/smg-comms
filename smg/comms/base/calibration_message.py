@@ -18,29 +18,29 @@ class CalibrationMessage(Message):
 
         # Set the maximum number of images that can be transmitted in a frame message. We're currently only
         # sending RGB-D images, which is why this is set to 2, but it can be increased if needed.
-        self.__max_images = 2
+        self.__max_images = 2  # type: int
 
         # The image shapes segment consists of a list of tuples [(h_1,w_1,ch_1), ...].
-        self.__image_shapes_fmt: str = "<" + "iii" * self.__max_images
+        self.__image_shapes_fmt = "<" + "iii" * self.__max_images  # type: str
 
         # The intrinsics segment consists of a list of tuples [(fx_1,fy_1,cx_1,cy_1), ...].
-        self.__intrinsics_fmt: str = "<" + "ffff" * self.__max_images
+        self.__intrinsics_fmt = "<" + "ffff" * self.__max_images  # type: str
 
         # The element byte sizes segment consists of a list of integers [bs_1,...], in which bs_i
         # denotes the size of an individual element in image i, such that the overall byte size of
         # image i is h_i * w_i * ch_i * bs_i. Crucially, this is not the size of an entire pixel,
         # which would be ch_i * bs_i.
-        self.__element_byte_sizes_fmt: str = "<" + "i" * self.__max_images
+        self.__element_byte_sizes_fmt = "<" + "i" * self.__max_images  # type: str
 
-        self.__image_shapes_segment: Tuple[int, int] = (
+        self.__image_shapes_segment = (
             0, struct.calcsize(self.__image_shapes_fmt)
-        )
-        self.__intrinsics_segment: Tuple[int, int] = (
+        )  # type: Tuple[int, int]
+        self.__intrinsics_segment = (
             Message._end_of(self.__image_shapes_segment), struct.calcsize(self.__intrinsics_fmt)
-        )
-        self.__element_byte_sizes_segment: Tuple[int, int] = (
+        )  # type: Tuple[int, int]
+        self.__element_byte_sizes_segment = (
             Message._end_of(self.__intrinsics_segment), struct.calcsize(self.__element_byte_sizes_fmt)
-        )
+        )  # type: Tuple[int, int]
 
         self._data = np.zeros(Message._end_of(self.__element_byte_sizes_segment), dtype=np.uint8)
 
@@ -52,9 +52,9 @@ class CalibrationMessage(Message):
 
         :return:    The image shapes.
         """
-        flat: List[int] = struct.unpack_from(
+        flat = struct.unpack_from(
             self.__image_shapes_fmt, self._data, self.__image_shapes_segment[0]
-        )
+        )  # type: List[int]
         return list(zip(flat[::3], flat[1::3], flat[2::3]))
 
     def get_intrinsics(self) -> List[Tuple[float, float, float, float]]:
@@ -63,9 +63,9 @@ class CalibrationMessage(Message):
 
         :return:    The camera intrinsics, as (fx, fy, cx, cy) tuples.
         """
-        flat: List[float] = struct.unpack_from(
+        flat = struct.unpack_from(
             self.__intrinsics_fmt, self._data, self.__intrinsics_segment[0]
-        )
+        )  # type: List[float]
         return list(zip(flat[::4], flat[1::4], flat[2::4], flat[3::4]))
 
     def get_max_images(self) -> int:
@@ -85,10 +85,10 @@ class CalibrationMessage(Message):
 
         :return:    The (unocmpressed) byte sizes of the images.
         """
-        image_shapes: List[Tuple[int, int, int]] = self.get_image_shapes()
-        element_byte_sizes: List[int] = list(
+        image_shapes = self.get_image_shapes()  # type: List[Tuple[int, int, int]]
+        element_byte_sizes = list(
             struct.unpack_from(self.__element_byte_sizes_fmt, self._data, self.__element_byte_sizes_segment[0])
-        )
+        )  # type: List[int]
         return [np.prod(s) * b for s, b in zip(image_shapes, element_byte_sizes)]
 
     def set_element_byte_sizes(self, element_byte_sizes: List[int]) -> None:

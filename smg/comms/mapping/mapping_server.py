@@ -26,17 +26,17 @@ class MappingServer:
         :param pool_empty_strategy: The strategy to use when a frame message is received by a client handler whilst
                                     the pool of frames associated with its frame message queue is empty.
         """
-        self.__client_handlers: Dict[int, MappingClientHandler] = {}
-        self.__finished_clients: Set[int] = set()
-        self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
-        self.__next_client_id: int = 0
-        self.__pool_empty_strategy: PooledQueue.EPoolEmptyStrategy = pool_empty_strategy
-        self.__port: int = port
-        self.__server_thread: Optional[threading.Thread] = None
-        self.__should_terminate: threading.Event = threading.Event()
+        self.__client_handlers = {}                             # type: Dict[int, MappingClientHandler]
+        self.__finished_clients = set()                         # type: Set[int]
+        self.__frame_decompressor = frame_decompressor          # type: Optional[Callable[[FrameMessage], FrameMessage]]
+        self.__next_client_id = 0                               # type: int
+        self.__pool_empty_strategy = pool_empty_strategy        # type: PooledQueue.EPoolEmptyStrategy
+        self.__port = port                                      # type: int
+        self.__server_thread = None                             # type: Optional[threading.Thread]
+        self.__should_terminate = threading.Event()             # type: threading.Event
 
-        self.__lock: threading.Lock = threading.Lock()
-        self.__client_ready: threading.Condition = threading.Condition(self.__lock)
+        self.__lock = threading.Lock()                          # type: threading.Lock
+        self.__client_ready = threading.Condition(self.__lock)  # type: threading.Condition
 
     # DESTRUCTOR
 
@@ -69,7 +69,7 @@ class MappingServer:
         :param receiver:    The frame receiver to which to pass the oldest frame from the client that has not
                             yet been processed.
         """
-        client_handler: MappingClientHandler = self._get_client_handler(client_id, wait_for_start=True)
+        client_handler = self._get_client_handler(client_id, wait_for_start=True)  # type: MappingClientHandler
         if client_handler is not None:
             client_handler.get_frame(receiver)
 
@@ -81,7 +81,7 @@ class MappingServer:
         :return:            The shapes of the images being produced by the different cameras, if the client
                             is active and a calibration message has been received from it, or None otherwise.
         """
-        client_handler: MappingClientHandler = self._get_client_handler(client_id, wait_for_start=True)
+        client_handler = self._get_client_handler(client_id, wait_for_start=True)  # type: MappingClientHandler
         return client_handler.get_image_shapes() if client_handler is not None else None
 
     def get_intrinsics(self, client_id: int) -> Optional[List[Tuple[float, float, float, float]]]:
@@ -93,7 +93,7 @@ class MappingServer:
                             as a list of (fx,fy,cx,cy) tuples, if the client is active and a calibration
                             message has been received from it, or None otherwise.
         """
-        client_handler: MappingClientHandler = self._get_client_handler(client_id, wait_for_start=True)
+        client_handler = self._get_client_handler(client_id, wait_for_start=True)  # type: MappingClientHandler
         return client_handler.get_intrinsics() if client_handler is not None else None
 
     def has_finished(self, client_id: int) -> bool:
@@ -113,7 +113,7 @@ class MappingServer:
         :param client_id:   The ID of the client to check.
         :return:            True, if the client is currently active and ready to yield a frame, or False otherwise.
         """
-        client_handler: MappingClientHandler = self._get_client_handler(client_id, wait_for_start=False)
+        client_handler = self._get_client_handler(client_id, wait_for_start=False)  # type: MappingClientHandler
         return client_handler.has_frames_now() if client_handler is not None else False
 
     def has_more_frames(self, client_id: int) -> bool:
@@ -140,7 +140,7 @@ class MappingServer:
                             not yet been processed.
         :return:            True, if a newest frame existed and was passed to the receiver, or False otherwise.
         """
-        client_handler: MappingClientHandler = self._get_client_handler(client_id, wait_for_start=True)
+        client_handler = self._get_client_handler(client_id, wait_for_start=True)  # type: MappingClientHandler
         if client_handler is not None:
             return client_handler.peek_newest_frame(receiver)
         else:
@@ -193,8 +193,8 @@ class MappingServer:
 
         :param client_handler:  The handler for the client.
         """
-        client_id: int = client_handler.get_client_id()
-        print(f"Starting client: {client_id}")
+        client_id = client_handler.get_client_id()  # type: int
+        print("Starting client: {}".format(client_id))
 
         # Run the pre-loop code for the client.
         client_handler.run_pre()
@@ -205,7 +205,7 @@ class MappingServer:
             self.__client_handlers[client_id] = client_handler
 
             # Signal to other threads that we're ready to start running the main loop for the client.
-            print(f"Client ready: {client_id}")
+            print("Client ready: {}".format(client_id))
             self.__client_ready.notify()
 
         # Run the main loop for the client. Loop until either (a) the connection drops, or (b) the server itself
@@ -218,22 +218,22 @@ class MappingServer:
 
         # Once the client's finished, add it to the finished clients set and remove its handler.
         with self.__lock:
-            print(f"Stopping client: {client_id}")
+            print("Stopping client: {}".format(client_id))
             self.__finished_clients.add(client_id)
             del(self.__client_handlers[client_id])
-            print(f"Client terminated: {client_id}")
+            print("Client terminated: {}".format(client_id))
 
     def __run_server(self) -> None:
         """Run the server."""
         # Set up the server socket and listen for connections.
-        server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # type: socket.SocketType
         server_sock.bind(("127.0.0.1", self.__port))
         server_sock.listen(5)
 
-        print(f"Listening for connections on 127.0.0.1:{self.__port}...")
+        print("Listening for connections on 127.0.0.1:{}...".format(self.__port))
 
         while not self.__should_terminate.is_set():
-            timeout: float = 0.1
+            timeout = 0.1  # type: float
             readable, _, _ = select([server_sock], [], [], timeout)
             if self.__should_terminate.is_set():
                 break
@@ -241,16 +241,16 @@ class MappingServer:
             for s in readable:
                 if s is server_sock:
                     client_sock, client_endpoint = server_sock.accept()
-                    print(f"Accepted connection from client {self.__next_client_id} @ {client_endpoint}")
+                    print("Accepted connection from client {} @ {}".format(self.__next_client_id, client_endpoint))
                     with self.__lock:
-                        client_handler: MappingClientHandler = MappingClientHandler(
+                        client_handler = MappingClientHandler(
                             self.__next_client_id, client_sock, self.__should_terminate,
                             frame_decompressor=self.__frame_decompressor,
                             pool_empty_strategy=self.__pool_empty_strategy
-                        )
-                        client_thread: threading.Thread = threading.Thread(
+                        )  # type: MappingClientHandler
+                        client_thread = threading.Thread(
                             target=self.__handle_client, args=[client_handler]
-                        )
+                        )  # type: threading.Thread
                         client_thread.start()
                         client_handler.set_thread(client_thread)
                         self.__next_client_id += 1

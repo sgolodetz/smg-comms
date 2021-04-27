@@ -25,11 +25,11 @@ class RGBDFrameMessageUtil:
         frame_idx, rgb_image, depth_image, pose = RGBDFrameMessageUtil.extract_frame_data(msg)
 
         # Compress the RGB and depth images.
-        compressed_rgb_image: np.ndarray = cv2.imencode(".jpg", rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 90])[1]
-        compressed_depth_image: np.ndarray = cv2.imencode(".png", depth_image)[1]
+        compressed_rgb_image = cv2.imencode(".jpg", rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 90])[1]  # type: np.ndarray
+        compressed_depth_image = cv2.imencode(".png", depth_image)[1]  # type: np.ndarray
 
         # Construct and return the compressed message.
-        compressed_msg: FrameMessage = FrameMessage(
+        compressed_msg = FrameMessage(
             msg.get_image_shapes(), [len(compressed_rgb_image), len(compressed_depth_image)]
         )
         compressed_msg.set_frame_index(frame_idx)
@@ -49,17 +49,17 @@ class RGBDFrameMessageUtil:
         :return:    The decompressed message.
         """
         # Extract the relevant data from the compressed frame message.
-        frame_idx: int = msg.get_frame_index()
-        compressed_rgb_image: np.ndarray = msg.get_image_data(0)
-        compressed_depth_image: np.ndarray = msg.get_image_data(1)
-        pose: np.ndarray = msg.get_pose(0)
+        frame_idx = msg.get_frame_index()               # type: int
+        compressed_rgb_image = msg.get_image_data(0)    # type: np.ndarray
+        compressed_depth_image = msg.get_image_data(1)  # type: np.ndarray
+        pose = msg.get_pose(0)                          # type: np.ndarray
 
         # Uncompress the RGB and depth images.
-        rgb_image: np.ndarray = cv2.imdecode(compressed_rgb_image, cv2.IMREAD_COLOR)
-        depth_image: np.ndarray = cv2.imdecode(compressed_depth_image, cv2.IMREAD_ANYDEPTH).astype(np.uint16)
+        rgb_image = cv2.imdecode(compressed_rgb_image, cv2.IMREAD_COLOR)  # type: np.ndarray
+        depth_image = cv2.imdecode(compressed_depth_image, cv2.IMREAD_ANYDEPTH).astype(np.uint16)  # type: np.ndarray
 
         # Construct and return the decompressed message.
-        decompressed_msg: FrameMessage = FrameMessage(
+        decompressed_msg = FrameMessage(
             msg.get_image_shapes(),
             [rgb_image.nbytes, depth_image.nbytes]
         )
@@ -75,10 +75,10 @@ class RGBDFrameMessageUtil:
         :param msg: The uncompressed RGB-D frame message.
         :return:    A tuple consisting of the frame index, the RGB image, the depth image and the pose.
         """
-        frame_idx: int = msg.get_frame_index()
-        rgb_image: np.ndarray = msg.get_image_data(0).reshape(msg.get_image_shapes()[0])
-        depth_image: np.ndarray = msg.get_image_data(1).view(np.uint16).reshape(msg.get_image_shapes()[1][:2])
-        pose: np.ndarray = msg.get_pose(0)
+        frame_idx = msg.get_frame_index()                                                           # type: int
+        rgb_image = msg.get_image_data(0).reshape(msg.get_image_shapes()[0])                        # type: np.ndarray
+        depth_image = msg.get_image_data(1).view(np.uint16).reshape(msg.get_image_shapes()[1][:2])  # type: np.ndarray
+        pose = msg.get_pose(0)                                                                      # type: np.ndarray
 
         # Note: It's extremely important that we return *copies* of the data here, since the versions in
         #       the message may change once this method returns. (The context is that the message comes
@@ -118,7 +118,7 @@ class RGBDFrameMessageUtil:
         :param depth_intrinsics:    The depth camera intrinsics.
         :return:                    The calibration message.
         """
-        calib_msg: CalibrationMessage = CalibrationMessage()
+        calib_msg = CalibrationMessage()
 
         # noinspection PyTypeChecker
         calib_msg.set_image_shapes([rgb_image_size[::-1] + (3,), depth_image_size[::-1] + (1,)])
@@ -139,9 +139,9 @@ class RGBDFrameMessageUtil:
         :param pose:        The pose.
         :return:            The uncompressed RGB-D frame message.
         """
-        image_shapes: List[Tuple[int, int, int]] = [rgb_image.shape, depth_image.shape + (1,)]
-        element_byte_sizes: List[int] = [struct.calcsize("<B"), struct.calcsize("<H")]
-        image_byte_sizes: List[int] = [np.prod(s) * b for s, b in zip(image_shapes, element_byte_sizes)]
-        msg: FrameMessage = FrameMessage(image_shapes, image_byte_sizes)
+        image_shapes = [rgb_image.shape, depth_image.shape + (1,)]  # type: List[Tuple[int, int, int]]
+        element_byte_sizes = [struct.calcsize("<B"), struct.calcsize("<H")]  # type: List[int]
+        image_byte_sizes = [np.prod(s) * b for s, b in zip(image_shapes, element_byte_sizes)]  # type: List[int]
+        msg = FrameMessage(image_shapes, image_byte_sizes)
         RGBDFrameMessageUtil.fill_frame_message(frame_idx, rgb_image, depth_image, pose, msg)
         return msg

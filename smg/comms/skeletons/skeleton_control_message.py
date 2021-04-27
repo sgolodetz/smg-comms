@@ -1,5 +1,3 @@
-# -*- coding: future_annotations -*-
-
 from typing import Optional
 
 from ..base import SimpleMessage
@@ -10,9 +8,9 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # CONSTANTS
 
-    BEGIN_DETECTION: int = 0
-    END_DETECTION: int = 1
-    SET_CALIBRATION: int = 2
+    BEGIN_DETECTION = 0  # type: int
+    END_DETECTION = 1    # type: int
+    SET_CALIBRATION = 2  # type: int
 
     # CONSTRUCTOR
 
@@ -29,7 +27,7 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # noinspection PyUnresolvedReferences
     @staticmethod
-    def begin_detection() -> SkeletonControlMessage:
+    def begin_detection() -> "SkeletonControlMessage":
         """
         Make a 'begin detection' control message.
 
@@ -39,7 +37,7 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # noinspection PyUnresolvedReferences
     @staticmethod
-    def end_detection() -> SkeletonControlMessage:
+    def end_detection() -> "SkeletonControlMessage":
         """
         Make an 'end detection' control message.
 
@@ -49,7 +47,7 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # noinspection PyUnresolvedReferences
     @staticmethod
-    def set_calibration() -> SkeletonControlMessage:
+    def set_calibration() -> "SkeletonControlMessage":
         """
         Make a 'set calibration' control message.
 

@@ -18,17 +18,17 @@ class FrameHeaderMessage(Message):
 
         # The image byte sizes segment consists of a list of integers [bs_1,...], in which bs_i denotes the
         # overall byte size of image i as stored in the frame message (e.g. potentially after compression).
-        self.__image_byte_sizes_fmt: str = "<" + "i" * max_images
+        self.__image_byte_sizes_fmt = "<" + "i" * max_images  # type: str
 
         # The image shapes segment consists of a list of tuples [(h_1,w_1,ch_1), ...].
-        self.__image_shapes_fmt: str = "<" + "iii" * max_images
+        self.__image_shapes_fmt = "<" + "iii" * max_images  # type: str
 
-        self.__image_byte_sizes_segment: Tuple[int, int] = (
+        self.__image_byte_sizes_segment = (
             0, struct.calcsize(self.__image_byte_sizes_fmt)
-        )
-        self.__image_shapes_segment: Tuple[int, int] = (
+        )  # type: Tuple[int, int]
+        self.__image_shapes_segment = (
             Message._end_of(self.__image_byte_sizes_segment), struct.calcsize(self.__image_shapes_fmt)
-        )
+        )  # type: Tuple[int, int]
 
         self._data = np.zeros(Message._end_of(self.__image_shapes_segment), dtype=np.uint8)
 
@@ -48,9 +48,9 @@ class FrameHeaderMessage(Message):
 
         :return:    The image shapes.
         """
-        flat: List[int] = struct.unpack_from(
+        flat = struct.unpack_from(
             self.__image_shapes_fmt, self._data, self.__image_shapes_segment[0]
-        )
+        )  # type: List[int]
         return list(zip(flat[::3], flat[1::3], flat[2::3]))
 
     def set_image_byte_sizes(self, image_byte_sizes: List[int]) -> None:

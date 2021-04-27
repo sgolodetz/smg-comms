@@ -18,7 +18,7 @@ class BinaryMaskMessage(Message):
         """
         super().__init__()
 
-        self.__mask_shape: Tuple[int, int] = mask_shape
+        self.__mask_shape = mask_shape  # type: Tuple[int, int]
 
         # Allocate a buffer of the size needed to store the bit-packed mask.
         self._data = np.zeros(int(np.ceil(np.product(mask_shape) / 8)), dtype=np.uint8)
@@ -31,7 +31,9 @@ class BinaryMaskMessage(Message):
 
         :return:    The binary mask.
         """
-        unpacked: np.ndarray = (np.unpackbits(self._data, count=np.product(self.__mask_shape)) * 255).astype(np.uint8)
+        unpacked = (
+            np.unpackbits(self._data, count=np.product(self.__mask_shape)) * 255
+        ).astype(np.uint8)  # type: np.ndarray
         return unpacked.reshape(self.__mask_shape)
 
     def set_mask(self, mask: np.ndarray) -> None:
@@ -47,4 +49,4 @@ class BinaryMaskMessage(Message):
         if mask.shape == self.__mask_shape:
             np.copyto(self._data, np.packbits(mask))
         else:
-            raise RuntimeError(f"The binary mask has shape {mask.shape} instead of {self.__mask_shape}")
+            raise RuntimeError("The binary mask has shape {} instead of {}".format(mask.shape, self.__mask_shape))

@@ -32,14 +32,14 @@ class SimpleMessage(Message, Generic[T]):
         super().__init__()
 
         # noinspection PyUnusedLocal
-        size: int = 0
-        self.__fmt: str = ""
+        size = 0  # type: int
+        self.__fmt = ""  # type: str
 
         if issubclass(t, int):
             self.__fmt = "i"
             size = 4
         else:
-            raise RuntimeError(f"Cannot construct SimpleMessage with unsupported type {t.__name__}")
+            raise RuntimeError("Cannot construct SimpleMessage with unsupported type {}".format(t.__name__))
 
         self._data = np.zeros(size, dtype=np.uint8)
 

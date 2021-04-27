@@ -23,13 +23,13 @@ class RemoteSkeletonDetector:
         :param timeout:             An optional socket timeout (in seconds).
         :param frame_compressor:    An optional function to use to compress frames prior to transmission.
         """
-        self.__alive: bool = False
-        self.__frame_compressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_compressor
-        self.__people_mask_shape: Optional[Tuple[int, int]] = None
+        self.__alive = False                        # type: bool
+        self.__frame_compressor = frame_compressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
+        self.__people_mask_shape = None             # type: Optional[Tuple[int, int]]
 
         try:
             # Try to connect to the service.
-            self.__sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # type: socket.SocketType
             self.__sock.connect(endpoint)
             if timeout is not None:
                 self.__sock.settimeout(timeout)
@@ -68,28 +68,28 @@ class RemoteSkeletonDetector:
         :return:                    True, if the detection was successfully requested, or False otherwise.
         """
         # Make the frame message.
-        dummy_frame_idx: int = -1
-        dummy_depth_image: np.ndarray = np.zeros(colour_image.shape[:2], dtype=np.uint16)
-        frame_msg: FrameMessage = RGBDFrameMessageUtil.make_frame_message(
+        dummy_frame_idx = -1  # type: int
+        dummy_depth_image = np.zeros(colour_image.shape[:2], dtype=np.uint16)  # type: np.ndarray
+        frame_msg = RGBDFrameMessageUtil.make_frame_message(
             dummy_frame_idx, colour_image, dummy_depth_image, world_from_camera
-        )
+        )  # type: FrameMessage
 
         # If requested, compress the frame prior to transmission.
-        compressed_frame_msg: FrameMessage = frame_msg
+        compressed_frame_msg = frame_msg  # type: FrameMessage
         if self.__frame_compressor is not None:
             compressed_frame_msg = self.__frame_compressor(frame_msg)
 
         # Make the frame header message.
-        max_images: int = 2
-        header_msg: FrameHeaderMessage = FrameHeaderMessage(max_images)
+        max_images = 2  # type: int
+        header_msg = FrameHeaderMessage(max_images)  # type: FrameHeaderMessage
         header_msg.set_image_byte_sizes(compressed_frame_msg.get_image_byte_sizes())
         header_msg.set_image_shapes(compressed_frame_msg.get_image_shapes())
 
         # First send the begin detection message, then send the frame header message, then send the frame message,
         # then wait for an acknowledgement from the service. We chain all of these with 'and' so as to early out
         # in case of failure.
-        connection_ok: bool = True
-        ack_msg: AckMessage = AckMessage()
+        connection_ok = True    # type: bool
+        ack_msg = AckMessage()  # type: AckMessage
 
         connection_ok = connection_ok and \
             SocketUtil.write_message(self.__sock, SkeletonControlMessage.begin_detection()) and \
@@ -126,7 +126,7 @@ class RemoteSkeletonDetector:
                     or (None, None) otherwise.
         """
         # Make a local copy of the expected people mask shape, if any, and reset the global one.
-        people_mask_shape: Optional[Tuple[int, int]] = self.__people_mask_shape
+        people_mask_shape = self.__people_mask_shape  # type: Optional[Tuple[int, int]]
         self.__people_mask_shape = None
 
         # If there isn't an expected people mask shape, there wasn't a previous successful call to
@@ -136,16 +136,16 @@ class RemoteSkeletonDetector:
 
         # First send the end detection message, then read the size of the skeleton data that the service
         # wants to send across.
-        data_size_msg: SimpleMessage[int] = SimpleMessage[int]()
-        connection_ok: bool = \
+        data_size_msg = SimpleMessage[int](int)  # type: SimpleMessage[int]
+        connection_ok = \
             SocketUtil.write_message(self.__sock, SkeletonControlMessage.end_detection()) and \
-            SocketUtil.read_message(self.__sock, data_size_msg)
+            SocketUtil.read_message(self.__sock, data_size_msg)  # type: bool
 
         # If that succeeds:
         if connection_ok:
             # Read the skeleton data itself, as well as the people mask.
-            data_msg: DataMessage = DataMessage(data_size_msg.extract_value())
-            mask_msg: BinaryMaskMessage = BinaryMaskMessage(people_mask_shape)
+            data_msg = DataMessage(data_size_msg.extract_value())  # type: DataMessage
+            mask_msg = BinaryMaskMessage(people_mask_shape)  # type: BinaryMaskMessage
             connection_ok = \
                 SocketUtil.read_message(self.__sock, data_msg) and \
                 SocketUtil.read_message(self.__sock, mask_msg)
@@ -153,13 +153,13 @@ class RemoteSkeletonDetector:
             # If that succeeds:
             if connection_ok:
                 # Construct a list of skeletons from the data.
-                data: str = str(data_msg.get_data().tobytes(), "utf-8")
-                skeletons: List[Skeleton] = eval(
+                data = str(data_msg.get_data().tobytes(), "utf-8")  # type: str
+                skeletons = eval(
                     data, {'array': np.array, 'Keypoint': Skeleton.Keypoint, 'Skeleton': Skeleton}
-                )
+                )  # type: List[Skeleton]
 
                 # Extract the people mask.
-                people_mask: np.ndarray = mask_msg.get_mask()
+                people_mask = mask_msg.get_mask()  # type: np.ndarray
 
                 return skeletons, people_mask
 
@@ -174,16 +174,16 @@ class RemoteSkeletonDetector:
         :param intrinsics:  The camera intrinsics, as an (fx, fy, cx, cy) tuple.
         :return:            True, if the camera calibration was successfully sent, or False otherwise.
         """
-        calib_msg: CalibrationMessage = RGBDFrameMessageUtil.make_calibration_message(
+        calib_msg = RGBDFrameMessageUtil.make_calibration_message(
             image_size, image_size, intrinsics, intrinsics
-        )
+        )  # type: CalibrationMessage
 
-        ack_msg: AckMessage = AckMessage()
+        ack_msg = AckMessage()  # type: AckMessage
 
-        connection_ok: bool = \
+        connection_ok = \
             SocketUtil.write_message(self.__sock, SkeletonControlMessage.set_calibration()) and \
             SocketUtil.write_message(self.__sock, calib_msg) and \
-            SocketUtil.read_message(self.__sock, ack_msg)
+            SocketUtil.read_message(self.__sock, ack_msg)  # type: bool
 
         return connection_ok
 

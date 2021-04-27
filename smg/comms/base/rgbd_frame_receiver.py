@@ -15,10 +15,10 @@ class RGBDFrameReceiver:
 
     def __init__(self):
         """Construct an RGB-D frame receiver."""
-        self.__frame_idx: Optional[int] = None
-        self.__rgb_image: Optional[np.ndarray] = None
-        self.__depth_image: Optional[np.ndarray] = None
-        self.__pose: Optional[np.ndarray] = None
+        self.__frame_idx = None    # type: Optional[int]
+        self.__rgb_image = None    # type: Optional[np.ndarray]
+        self.__depth_image = None  # type: Optional[np.ndarray]
+        self.__pose = None         # type: Optional[np.ndarray]
 
     # SPECIAL METHODS
 

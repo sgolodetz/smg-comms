@@ -28,12 +28,12 @@ class SocketUtil:
         :return:        True, if reading succeeded, or False otherwise.
         """
         try:
-            data: bytes = b""
+            data = b""  # type: bytes
 
             # Until we've read the number of bytes we were expecting:
             while len(data) < msg.get_size():
                 # Try to get the remaining bytes.
-                received: bytes = sock.recv(msg.get_size() - len(data))
+                received = sock.recv(msg.get_size() - len(data))  # type: bytes
 
                 # If we made progress, append the new bytes to the buffer. If not, something's wrong, so return False.
                 if len(received) > 0:
