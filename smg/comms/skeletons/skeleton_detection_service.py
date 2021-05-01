@@ -139,7 +139,7 @@ class SkeletonDetectionService:
                             mask_msg.set_mask(people_mask)
 
                             connection_ok = \
-                                SocketUtil.write_message(client_sock, SimpleMessage[int](len(data))) and \
+                                SocketUtil.write_message(client_sock, SimpleMessage[int](int, len(data))) and \
                                 SocketUtil.write_message(client_sock, data_msg) and \
                                 SocketUtil.write_message(client_sock, mask_msg)
 
