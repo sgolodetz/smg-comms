@@ -26,7 +26,7 @@ class RGBDFrameMessageUtil:
 
         # Compress the RGB and depth images.
         compressed_rgb_image = cv2.imencode(".jpg", rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 90])[1]  # type: np.ndarray
-        compressed_depth_image = cv2.imencode(".png", depth_image)[1]  # type: np.ndarray
+        compressed_depth_image = cv2.imencode(".png", depth_image)[1]                              # type: np.ndarray
 
         # Construct and return the compressed message.
         compressed_msg = FrameMessage(
@@ -55,7 +55,7 @@ class RGBDFrameMessageUtil:
         pose = msg.get_pose(0)                          # type: np.ndarray
 
         # Uncompress the RGB and depth images.
-        rgb_image = cv2.imdecode(compressed_rgb_image, cv2.IMREAD_COLOR)  # type: np.ndarray
+        rgb_image = cv2.imdecode(compressed_rgb_image, cv2.IMREAD_COLOR)                           # type: np.ndarray
         depth_image = cv2.imdecode(compressed_depth_image, cv2.IMREAD_ANYDEPTH).astype(np.uint16)  # type: np.ndarray
 
         # Construct and return the decompressed message.

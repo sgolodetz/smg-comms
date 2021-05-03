@@ -178,7 +178,7 @@ class MappingClientHandler:
         if self.__connection_ok:
             # Print the camera parameters out for debugging purposes.
             image_shapes = self.__calib_msg.get_image_shapes()  # type: List[Tuple[int, int, int]]
-            intrinsics = self.__calib_msg.get_intrinsics()  # type: List[Tuple[float, float, float, float]]
+            intrinsics = self.__calib_msg.get_intrinsics()      # type: List[Tuple[float, float, float, float]]
             print(
                 "Received camera parameters from client {}: {}, {}".format(self.__client_id, image_shapes, intrinsics)
             )

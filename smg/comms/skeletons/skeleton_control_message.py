@@ -25,7 +25,6 @@ class SkeletonControlMessage(SimpleMessage[int]):
 
     # PUBLIC STATIC METHODS
 
-    # noinspection PyUnresolvedReferences
     @staticmethod
     def begin_detection() -> "SkeletonControlMessage":
         """
@@ -35,7 +34,6 @@ class SkeletonControlMessage(SimpleMessage[int]):
         """
         return SkeletonControlMessage(SkeletonControlMessage.BEGIN_DETECTION)
 
-    # noinspection PyUnresolvedReferences
     @staticmethod
     def end_detection() -> "SkeletonControlMessage":
         """
@@ -45,7 +43,6 @@ class SkeletonControlMessage(SimpleMessage[int]):
         """
         return SkeletonControlMessage(SkeletonControlMessage.END_DETECTION)
 
-    # noinspection PyUnresolvedReferences
     @staticmethod
     def set_calibration() -> "SkeletonControlMessage":
         """

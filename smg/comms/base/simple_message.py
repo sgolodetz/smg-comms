@@ -22,17 +22,13 @@ class SimpleMessage(Message, Generic[T]):
         """
         Construct a simple message.
 
-        .. note::
-            It's not possible to infer the actual type of T here when this constructor is invoked by a
-            derived constructor. Instead, the derived constructor must pass it in explicitly.
-
-        :param t:       The actual type of T.
+        :param t:       The type of the message value.
         :param value:   An optional initial message value.
         """
         super().__init__()
 
         # noinspection PyUnusedLocal
-        size = 0  # type: int
+        size = 0         # type: int
         self.__fmt = ""  # type: str
 
         if issubclass(t, int):
