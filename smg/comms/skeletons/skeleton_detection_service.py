@@ -29,54 +29,54 @@ class SkeletonDetectionService:
         :param debug:               Whether to print out debug messages.
         :param frame_decompressor:  An optional function to use to decompress received frames.
         """
-        self.__debug: bool = debug
-        self.__framebuffer: Optional[OpenGLFrameBuffer] = None
-        self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
-        self.__frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]] = frame_processor
-        self.__port: int = port
+        self.__debug = debug                            # type: bool
+        self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
+        self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
+        self.__frame_processor = frame_processor  # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]]
+        self.__port = port                              # type: int
 
     # PUBLIC METHODS
 
     def run(self) -> None:
         """Run the service."""
         # Set up the server socket.
-        server_sock: socket.SocketType = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # type: socket.SocketType
         server_sock.bind(("127.0.0.1", self.__port))
 
         # Repeatedly:
         while True:
             # Listen for a connection.
             server_sock.listen(1)
-            print(f"Listening for a connection on 127.0.0.1:{self.__port}...")
+            print("Listening for a connection on 127.0.0.1:{}...".format(self.__port))
 
-            client_sock: Optional[socket.SocketType] = None
+            client_sock = None  # type: Optional[socket.SocketType]
 
             while client_sock is None:
-                timeout: float = 0.1
+                timeout = 0.1  # type: float
                 readable, _, _ = select([server_sock], [], [], timeout)
 
                 for s in readable:
                     if s is server_sock:
                         client_sock, client_endpoint = server_sock.accept()
-                        print(f"Accepted connection from client @ {client_endpoint}")
+                        print("Accepted connection from client @ {}".format(client_endpoint))
 
             # Once a client has connected, process any detection requests received from it. If the client
             # disconnects, keep the service running and loop back round to wait for another client.
-            connection_ok: bool = True
-            intrinsics: Optional[Tuple[float, float, float, float]] = None
-            people_mask: Optional[np.ndarray] = None
-            receiver: RGBDFrameReceiver = RGBDFrameReceiver()
-            skeletons: Optional[List[Skeleton]] = None
+            connection_ok = True            # type: bool
+            intrinsics = None               # type: Optional[Tuple[float, float, float, float]]
+            people_mask = None              # type: Optional[np.ndarray]
+            receiver = RGBDFrameReceiver()  # type: RGBDFrameReceiver
+            skeletons = None                # type: Optional[List[Skeleton]]
 
             while connection_ok:
                 # First, try to read a control message from the client.
-                control_msg: SkeletonControlMessage = SkeletonControlMessage()
+                control_msg = SkeletonControlMessage()  # type: SkeletonControlMessage
                 connection_ok = SocketUtil.read_message(client_sock, control_msg)
 
                 # If that succeeds:
                 if connection_ok:
                     # Extract the control message value to tell us whether this is the start or end of a detection.
-                    value: int = control_msg.extract_value()
+                    value = control_msg.extract_value()  # type: int
 
                     # If this is the start of a detection:
                     if value == SkeletonControlMessage.BEGIN_DETECTION:
@@ -84,16 +84,16 @@ class SkeletonDetectionService:
                             print("Begin Detection")
 
                         # Try to read a frame header message.
-                        max_images: int = 2
-                        header_msg: FrameHeaderMessage = FrameHeaderMessage(max_images)
+                        max_images = 2  # type: int
+                        header_msg = FrameHeaderMessage(max_images)  # type: FrameHeaderMessage
                         connection_ok = SocketUtil.read_message(client_sock, header_msg)
 
                         # If that succeeds:
                         if connection_ok:
                             # Set up a frame message accordingly.
-                            image_shapes: List[Tuple[int, int, int]] = header_msg.get_image_shapes()
-                            image_byte_sizes: List[int] = header_msg.get_image_byte_sizes()
-                            frame_msg: FrameMessage = FrameMessage(image_shapes, image_byte_sizes)
+                            image_shapes = header_msg.get_image_shapes()              # type: List[Tuple[int, int, int]]
+                            image_byte_sizes = header_msg.get_image_byte_sizes()      # type: List[int]
+                            frame_msg = FrameMessage(image_shapes, image_byte_sizes)  # type: FrameMessage
 
                             # Try to read the contents of the frame message from the client.
                             connection_ok = SocketUtil.read_message(client_sock, frame_msg)
@@ -104,7 +104,7 @@ class SkeletonDetectionService:
                                 connection_ok = SocketUtil.write_message(client_sock, AckMessage())
 
                                 # Decompress the frame as necessary.
-                                decompressed_frame_msg: FrameMessage = frame_msg
+                                decompressed_frame_msg = frame_msg  # type: FrameMessage
                                 if self.__frame_decompressor is not None:
                                     decompressed_frame_msg = self.__frame_decompressor(frame_msg)
 
@@ -131,15 +131,15 @@ class SkeletonDetectionService:
                         if skeletons is not None:
                             # Send them across to the client.
                             # noinspection PyTypeChecker
-                            data: np.ndarray = np.frombuffer(bytes(repr(skeletons), "utf-8"), dtype=np.uint8)
-                            data_msg: DataMessage = DataMessage(len(data))
+                            data = np.frombuffer(bytes(repr(skeletons), "utf-8"), dtype=np.uint8)  # type: np.ndarray
+                            data_msg = DataMessage(len(data))  # type: DataMessage
                             np.copyto(data_msg.get_data(), data)
 
-                            mask_msg: BinaryMaskMessage = BinaryMaskMessage(people_mask.shape)
+                            mask_msg = BinaryMaskMessage(people_mask.shape)  # type: BinaryMaskMessage
                             mask_msg.set_mask(people_mask)
 
                             connection_ok = \
-                                SocketUtil.write_message(client_sock, SimpleMessage[int](len(data))) and \
+                                SocketUtil.write_message(client_sock, SimpleMessage[int](int, len(data))) and \
                                 SocketUtil.write_message(client_sock, data_msg) and \
                                 SocketUtil.write_message(client_sock, mask_msg)
 
@@ -154,7 +154,7 @@ class SkeletonDetectionService:
                             print("Set Calibration")
 
                         # Try to read a calibration message.
-                        calib_msg: CalibrationMessage = CalibrationMessage()
+                        calib_msg = CalibrationMessage()  # type: CalibrationMessage
                         connection_ok = SocketUtil.read_message(client_sock, calib_msg)
 
                         # If that succeeds:

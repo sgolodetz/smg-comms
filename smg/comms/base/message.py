@@ -11,7 +11,7 @@ class Message(ABC):
 
     def __init__(self):
         """Construct a message."""
-        self._data: Optional[np.ndarray] = None
+        self._data = None  # type: Optional[np.ndarray]
 
     # PUBLIC METHODS
 

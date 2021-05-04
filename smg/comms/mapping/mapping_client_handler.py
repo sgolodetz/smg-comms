@@ -34,15 +34,15 @@ class MappingClientHandler:
         :param pool_empty_strategy: The strategy to use when a frame message is received whilst the pool of frames
                                     associated with the frame message queue is empty.
         """
-        self.__calib_msg: Optional[CalibrationMessage] = None
-        self.__client_id: int = client_id
-        self.__connection_ok: bool = True
-        self.__frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = frame_decompressor
-        self.__frame_message_queue: PooledQueue[FrameMessage] = PooledQueue[FrameMessage](pool_empty_strategy)
-        self.__lock: threading.Lock = threading.Lock()
-        self.__should_terminate: threading.Event = should_terminate
-        self.__sock: socket.SocketType = sock
-        self.__thread: Optional[threading.Thread] = None
+        self.__calib_msg = None                         # type: Optional[CalibrationMessage]
+        self.__client_id = client_id                    # type: int
+        self.__connection_ok = True                     # type: bool
+        self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
+        self.__frame_message_queue = PooledQueue[FrameMessage](pool_empty_strategy)  # type: PooledQueue[FrameMessage]
+        self.__lock = threading.Lock()                  # type: threading.Lock
+        self.__should_terminate = should_terminate      # type: threading.Event
+        self.__sock = sock                              # type: socket.SocketType
+        self.__thread = None                            # type: Optional[threading.Thread]
 
     # PUBLIC METHODS
 
@@ -133,15 +133,15 @@ class MappingClientHandler:
     def run_iter(self) -> None:
         """Run an iteration of the main loop for the client."""
         # Try to read a frame header message.
-        header_msg: FrameHeaderMessage = FrameHeaderMessage(self.__calib_msg.get_max_images())
+        header_msg = FrameHeaderMessage(self.__calib_msg.get_max_images())  # type: FrameHeaderMessage
         self.__connection_ok = SocketUtil.read_message(self.__sock, header_msg)
 
         # If that succeeds:
         if self.__connection_ok:
             # Set up a frame message accordingly.
-            image_shapes: List[Tuple[int, int, int]] = header_msg.get_image_shapes()
-            image_byte_sizes: List[int] = header_msg.get_image_byte_sizes()
-            frame_msg: FrameMessage = FrameMessage(image_shapes, image_byte_sizes)
+            image_shapes = header_msg.get_image_shapes()              # type: List[Tuple[int, int, int]]
+            image_byte_sizes = header_msg.get_image_byte_sizes()      # type: List[int]
+            frame_msg = FrameMessage(image_shapes, image_byte_sizes)  # type: FrameMessage
 
             # Try to read the contents of the frame message from the client.
             self.__connection_ok = SocketUtil.read_message(self.__sock, frame_msg)
@@ -149,15 +149,15 @@ class MappingClientHandler:
             # If that succeeds:
             if self.__connection_ok:
                 # Decompress the frame as necessary.
-                decompressed_frame_msg: FrameMessage = frame_msg
+                decompressed_frame_msg = frame_msg  # type: FrameMessage
                 if self.__frame_decompressor is not None:
                     decompressed_frame_msg = self.__frame_decompressor(frame_msg)
 
                 # Push the decompressed frame onto the message queue.
                 with self.__frame_message_queue.begin_push(self.__should_terminate) as push_handler:
-                    elt: Optional[FrameMessage] = push_handler.get()
+                    elt = push_handler.get()  # type: Optional[FrameMessage]
                     if elt is not None:
-                        msg: FrameMessage = cast(FrameMessage, elt)
+                        msg = cast(FrameMessage, elt)  # type: FrameMessage
                         np.copyto(msg.get_data(), decompressed_frame_msg.get_data())
 
                 # Send an acknowledgement to the client.
@@ -177,14 +177,14 @@ class MappingClientHandler:
         # If the calibration message was successfully read:
         if self.__connection_ok:
             # Print the camera parameters out for debugging purposes.
-            image_shapes: List[Tuple[int, int, int]] = self.__calib_msg.get_image_shapes()
-            intrinsics: List[Tuple[float, float, float, float]] = self.__calib_msg.get_intrinsics()
+            image_shapes = self.__calib_msg.get_image_shapes()  # type: List[Tuple[int, int, int]]
+            intrinsics = self.__calib_msg.get_intrinsics()      # type: List[Tuple[float, float, float, float]]
             print(
-                f"Received camera parameters from client {self.__client_id}: {image_shapes}, {intrinsics}"
+                "Received camera parameters from client {}: {}, {}".format(self.__client_id, image_shapes, intrinsics)
             )
 
             # Initialise the frame message queue.
-            capacity: int = 5
+            capacity = 5  # type: int
             self.__frame_message_queue.initialise(capacity, lambda: FrameMessage(
                 self.__calib_msg.get_image_shapes(), self.__calib_msg.get_uncompressed_image_byte_sizes()
             ))

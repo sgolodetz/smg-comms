@@ -28,25 +28,25 @@ class FrameMessage(Message):
         """
         super().__init__()
 
-        self.__image_shapes: List[Tuple[int, int, int]] = image_shapes
-        self.__image_byte_sizes: List[int] = image_byte_sizes
+        self.__image_shapes = image_shapes  # type: List[Tuple[int, int, int]]
+        self.__image_byte_sizes = image_byte_sizes  # type: List[int]
 
         # The frame index segment consists of a single integer denoting the frame index.
-        self.__frame_index_fmt: str = "<i"
+        self.__frame_index_fmt = "<i"  # type: str
 
         # The poses segment consists of a list of poses, each denoting a 4x4 matrix.
-        self.__pose_byte_size: int = struct.calcsize("<ffffffffffffffff")
-        self.__poses_fmt: str = "<" + "ffffffffffffffff" * len(image_shapes)
+        self.__pose_byte_size = struct.calcsize("<ffffffffffffffff")  # type: int
+        self.__poses_fmt = "<" + "ffffffffffffffff" * len(image_shapes)  # type: str
 
-        self.__frame_index_segment: Tuple[int, int] = (
+        self.__frame_index_segment = (
             0, struct.calcsize(self.__frame_index_fmt)
-        )
-        self.__poses_segment: Tuple[int, int] = (
+        )  # type: Tuple[int, int]
+        self.__poses_segment = (
             Message._end_of(self.__frame_index_segment), struct.calcsize(self.__poses_fmt)
-        )
-        self.__images_segment: Tuple[int, int] = (
+        )  # type: Tuple[int, int]
+        self.__images_segment = (
             Message._end_of(self.__poses_segment), sum(self.__image_byte_sizes)
-        )
+        )  # type: Tuple[int, int]
 
         self._data = np.zeros(Message._end_of(self.__images_segment), dtype=np.uint8)
 
@@ -75,10 +75,10 @@ class FrameMessage(Message):
         :param image_idx:   The index of the image whose data we want to look up.
         :return:            The data for the specified image.
         """
-        start: int = self.__images_segment[0]
+        start = self.__images_segment[0]  # type: int
         for i in range(image_idx):
             start += self.__image_byte_sizes[i]
-        end: int = start + self.__image_byte_sizes[image_idx]
+        end = start + self.__image_byte_sizes[image_idx]  # type: int
         return self._data[start:end]
 
     def get_image_shapes(self) -> List[Tuple[int, int, int]]:
@@ -133,5 +133,5 @@ class FrameMessage(Message):
         :param image_idx:   The index of the image whose pose data we want to look up.
         :return:            The pose data for the specified image, as a byte segment.
         """
-        start: int = self.__poses_segment[0] + image_idx * self.__pose_byte_size
+        start = self.__poses_segment[0] + image_idx * self.__pose_byte_size  # type: int
         return self._data[start:start+self.__pose_byte_size]
