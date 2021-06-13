@@ -3,7 +3,7 @@ import socket
 
 from typing import Callable, List, Optional, Tuple
 
-from smg.skeletons import Skeleton
+from smg.skeletons import Skeleton3D
 
 from ..base import *
 from .skeleton_control_message import SkeletonControlMessage
@@ -104,7 +104,7 @@ class RemoteSkeletonDetector:
         return connection_ok
 
     def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray) \
-            -> Tuple[Optional[List[Skeleton]], Optional[np.ndarray]]:
+            -> Tuple[Optional[List[Skeleton3D]], Optional[np.ndarray]]:
         """
         Try to use the remote skeleton detection service to detect any skeletons in the specified colour image.
 
@@ -118,7 +118,7 @@ class RemoteSkeletonDetector:
         else:
             return None, None
 
-    def end_detection(self) -> Tuple[Optional[List[Skeleton]], Optional[np.ndarray]]:
+    def end_detection(self) -> Tuple[Optional[List[Skeleton3D]], Optional[np.ndarray]]:
         """
         Try to request that the remote skeleton detection service send across any skeletons that it has just detected.
 
@@ -155,8 +155,8 @@ class RemoteSkeletonDetector:
                 # Construct a list of skeletons from the data.
                 data = str(data_msg.get_data().tobytes(), "utf-8")  # type: str
                 skeletons = eval(
-                    data, {'array': np.array, 'Keypoint': Skeleton.Keypoint, 'Skeleton': Skeleton}
-                )  # type: List[Skeleton]
+                    data, {'array': np.array, 'Keypoint': Skeleton3D.Keypoint, 'Skeleton3D': Skeleton3D}
+                )  # type: List[Skeleton3D]
 
                 # Extract the people mask.
                 people_mask = mask_msg.get_mask()  # type: np.ndarray
