@@ -32,7 +32,8 @@ class SkeletonDetectionService:
         self.__debug = debug                            # type: bool
         self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
         self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
-        self.__frame_processor = frame_processor  # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]]
+        self.__frame_processor = frame_processor  \
+            # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]]
         self.__port = port                              # type: int
 
     # PUBLIC METHODS
