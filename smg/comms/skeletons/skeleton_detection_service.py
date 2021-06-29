@@ -7,7 +7,7 @@ from typing import Callable, List, Optional, Tuple
 
 from smg.opengl import OpenGLFrameBuffer, OpenGLMatrixContext, OpenGLUtil
 from smg.rigging.helpers import CameraPoseConverter
-from smg.skeletons import Skeleton, SkeletonRenderer
+from smg.skeletons import Skeleton3D, SkeletonRenderer
 
 from ..base import *
 from .skeleton_control_message import SkeletonControlMessage
@@ -18,7 +18,7 @@ class SkeletonDetectionService:
 
     # CONSTRUCTOR
 
-    def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]],
+    def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]],
                  port: int = 7852, *, debug: bool = False,
                  frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
         """
@@ -32,7 +32,8 @@ class SkeletonDetectionService:
         self.__debug = debug                            # type: bool
         self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
         self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
-        self.__frame_processor = frame_processor  # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton]]
+        self.__frame_processor = frame_processor \
+            # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]]
         self.__port = port                              # type: int
 
     # PUBLIC METHODS
@@ -66,7 +67,7 @@ class SkeletonDetectionService:
             intrinsics = None               # type: Optional[Tuple[float, float, float, float]]
             people_mask = None              # type: Optional[np.ndarray]
             receiver = RGBDFrameReceiver()  # type: RGBDFrameReceiver
-            skeletons = None                # type: Optional[List[Skeleton]]
+            skeletons = None                # type: Optional[List[Skeleton3D]]
 
             while connection_ok:
                 # First, try to read a control message from the client.
@@ -167,7 +168,7 @@ class SkeletonDetectionService:
 
     # PRIVATE METHODS
 
-    def __render_people_mask(self, skeletons: List[Skeleton], world_from_camera: np.ndarray,
+    def __render_people_mask(self, skeletons: List[Skeleton3D], world_from_camera: np.ndarray,
                              intrinsics: Optional[Tuple[float, float, float, float]],
                              width: int, height: int) -> np.ndarray:
         """
