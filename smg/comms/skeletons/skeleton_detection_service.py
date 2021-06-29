@@ -20,7 +20,8 @@ class SkeletonDetectionService:
 
     def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]],
                  port: int = 7852, *, debug: bool = False,
-                 frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None):
+                 frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None,
+                 post_client_hook: Optional[Callable[[], None]] = None):
         """
         Construct a skeleton detection service.
 
@@ -28,6 +29,7 @@ class SkeletonDetectionService:
         :param port:                The port on which the service should listen for a connection.
         :param debug:               Whether to print out debug messages.
         :param frame_decompressor:  An optional function to use to decompress received frames.
+        :param post_client_hook:    An optional function to call each time a client disconnects.
         """
         self.__debug = debug                            # type: bool
         self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
@@ -35,6 +37,7 @@ class SkeletonDetectionService:
         self.__frame_processor = frame_processor \
             # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]]
         self.__port = port                              # type: int
+        self.__post_client_hook = post_client_hook      # type: Optional[Callable[[], None]]
 
     # PUBLIC METHODS
 
@@ -165,6 +168,10 @@ class SkeletonDetectionService:
 
                             # Send an acknowledgement message.
                             connection_ok = SocketUtil.write_message(client_sock, AckMessage())
+
+            # If there's a hook function to call after a client disconnects, call it.
+            if self.__post_client_hook is not None:
+                self.__post_client_hook()
 
     # PRIVATE METHODS
 
