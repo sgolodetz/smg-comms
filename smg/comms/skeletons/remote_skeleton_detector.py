@@ -3,7 +3,7 @@ import socket
 
 from typing import Callable, List, Optional, Tuple
 
-from smg.skeletons import Keypoint, Skeleton3D
+from smg.skeletons import Skeleton3D, SkeletonUtil
 
 from ..base import *
 from .skeleton_control_message import SkeletonControlMessage
@@ -154,9 +154,7 @@ class RemoteSkeletonDetector:
             if connection_ok:
                 # Construct a list of skeletons from the data.
                 data = str(data_msg.get_data().tobytes(), "utf-8")  # type: str
-                skeletons = eval(
-                    data, {'array': np.array, 'Keypoint': Keypoint, 'Skeleton3D': Skeleton3D}
-                )  # type: List[Skeleton3D]
+                skeletons = SkeletonUtil.string_to_skeletons(data)  # type: List[Skeleton3D]
 
                 # Extract the people mask.
                 people_mask = mask_msg.get_mask()  # type: np.ndarray
