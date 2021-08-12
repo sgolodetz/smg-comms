@@ -34,6 +34,9 @@ class FrameMessage(Message):
         # The frame index segment consists of a single integer denoting the frame index.
         self.__frame_index_fmt = "<i"  # type: str
 
+        # The frame timestamp segment consists of a single double denoting the frame timestamp.
+        self.__frame_timestamp_fmt = "<d"  # type: str
+
         # The poses segment consists of a list of poses, each denoting a 4x4 matrix.
         self.__pose_byte_size = struct.calcsize("<ffffffffffffffff")  # type: int
         self.__poses_fmt = "<" + "ffffffffffffffff" * len(image_shapes)  # type: str
@@ -41,8 +44,11 @@ class FrameMessage(Message):
         self.__frame_index_segment = (
             0, struct.calcsize(self.__frame_index_fmt)
         )  # type: Tuple[int, int]
+        self.__frame_timestamp_segment = (
+            Message._end_of(self.__frame_index_segment), struct.calcsize(self.__frame_timestamp_fmt)
+        )  # type: Tuple[int, int]
         self.__poses_segment = (
-            Message._end_of(self.__frame_index_segment), struct.calcsize(self.__poses_fmt)
+            Message._end_of(self.__frame_timestamp_segment), struct.calcsize(self.__poses_fmt)
         )  # type: Tuple[int, int]
         self.__images_segment = (
             Message._end_of(self.__poses_segment), sum(self.__image_byte_sizes)
@@ -59,6 +65,14 @@ class FrameMessage(Message):
         :return:    The frame index.
         """
         return struct.unpack_from(self.__frame_index_fmt, self._data, self.__frame_index_segment[0])[0]
+
+    def get_frame_timestamp(self) -> float:
+        """
+        Get the frame timestamp from the message.
+
+        :return:    The frame timestamp.
+        """
+        return struct.unpack_from(self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0])[0]
 
     def get_image_byte_sizes(self) -> List[int]:
         """
@@ -105,6 +119,14 @@ class FrameMessage(Message):
         :param frame_index: The frame index.
         """
         struct.pack_into(self.__frame_index_fmt, self._data, self.__frame_index_segment[0], frame_index)
+
+    def set_frame_timestamp(self, frame_timestamp: float) -> None:
+        """
+        Copy a frame timestamp into the appropriate byte segment in the message.
+
+        :param frame_timestamp: The frame timestamp.
+        """
+        struct.pack_into(self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0], frame_timestamp)
 
     def set_image_data(self, image_idx: int, image_data: np.ndarray) -> None:
         """
