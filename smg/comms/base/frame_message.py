@@ -1,7 +1,7 @@
 import numpy as np
 import struct
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from .message import Message
 
@@ -66,13 +66,16 @@ class FrameMessage(Message):
         """
         return struct.unpack_from(self.__frame_index_fmt, self._data, self.__frame_index_segment[0])[0]
 
-    def get_frame_timestamp(self) -> float:
+    def get_frame_timestamp(self) -> Optional[float]:
         """
         Get the frame timestamp from the message.
 
         :return:    The frame timestamp.
         """
-        return struct.unpack_from(self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0])[0]
+        frame_timestamp: float = struct.unpack_from(
+            self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0]
+        )[0]
+        return frame_timestamp if frame_timestamp >= 0 else None
 
     def get_image_byte_sizes(self) -> List[int]:
         """
@@ -120,13 +123,16 @@ class FrameMessage(Message):
         """
         struct.pack_into(self.__frame_index_fmt, self._data, self.__frame_index_segment[0], frame_index)
 
-    def set_frame_timestamp(self, frame_timestamp: float) -> None:
+    def set_frame_timestamp(self, frame_timestamp: Optional[float]) -> None:
         """
         Copy a frame timestamp into the appropriate byte segment in the message.
 
         :param frame_timestamp: The frame timestamp.
         """
-        struct.pack_into(self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0], frame_timestamp)
+        struct.pack_into(
+            self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0],
+            frame_timestamp if frame_timestamp is not None else -1.0
+        )
 
     def set_image_data(self, image_idx: int, image_data: np.ndarray) -> None:
         """

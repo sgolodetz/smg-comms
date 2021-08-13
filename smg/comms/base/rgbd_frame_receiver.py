@@ -54,7 +54,7 @@ class RGBDFrameReceiver:
         """
         return self.__frame_idx
 
-    def get_frame_timestamp(self) -> float:
+    def get_frame_timestamp(self) -> Optional[float]:
         """
         Get the timestamp of the RGB-D frame.
 

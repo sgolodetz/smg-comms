@@ -51,7 +51,7 @@ class RGBDFrameMessageUtil:
         """
         # Extract the relevant data from the compressed frame message.
         frame_idx = msg.get_frame_index()               # type: int
-        frame_timestamp = msg.get_frame_timestamp()     # type: float
+        frame_timestamp = msg.get_frame_timestamp()     # type: Optional[float]
         compressed_rgb_image = msg.get_image_data(0)    # type: np.ndarray
         compressed_depth_image = msg.get_image_data(1)  # type: np.ndarray
         pose = msg.get_pose(0)                          # type: np.ndarray
@@ -72,7 +72,7 @@ class RGBDFrameMessageUtil:
         return decompressed_msg
 
     @staticmethod
-    def extract_frame_data(msg: FrameMessage) -> Tuple[int, float, np.ndarray, np.ndarray, np.ndarray]:
+    def extract_frame_data(msg: FrameMessage) -> Tuple[int, Optional[float], np.ndarray, np.ndarray, np.ndarray]:
         """
         Extract the relevant data from an uncompressed RGB-D frame message.
 
@@ -80,11 +80,11 @@ class RGBDFrameMessageUtil:
         :return:    A tuple consisting of the frame index, the frame timestamp, the RGB image, the depth image
                     and the pose.
         """
-        frame_idx = msg.get_frame_index()                                                           # type: int
-        frame_timestamp = msg.get_frame_timestamp()                                                 # type: float
-        rgb_image = msg.get_image_data(0).reshape(msg.get_image_shapes()[0])                        # type: np.ndarray
+        frame_idx = msg.get_frame_index()  # type: int
+        frame_timestamp = msg.get_frame_timestamp()  # type: Optional[float]
+        rgb_image = msg.get_image_data(0).reshape(msg.get_image_shapes()[0])  # type: np.ndarray
         depth_image = msg.get_image_data(1).view(np.uint16).reshape(msg.get_image_shapes()[1][:2])  # type: np.ndarray
-        pose = msg.get_pose(0)                                                                      # type: np.ndarray
+        pose = msg.get_pose(0)  # type: np.ndarray
 
         # Note: It's extremely important that we return *copies* of the data here, since the versions in
         #       the message may change once this method returns. (The context is that the message comes
@@ -106,7 +106,7 @@ class RGBDFrameMessageUtil:
         :param frame_timestamp: The timestamp for the frame (if known).
         """
         msg.set_frame_index(frame_idx)
-        msg.set_frame_timestamp(frame_timestamp if frame_timestamp is not None else -1.0)
+        msg.set_frame_timestamp(frame_timestamp)
         msg.set_image_data(0, rgb_image.reshape(-1))
         msg.set_pose(0, pose)
         msg.set_image_data(1, depth_image.reshape(-1).view(np.uint8))
