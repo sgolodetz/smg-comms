@@ -58,6 +58,9 @@ class RGBDFrameReceiver:
         """
         Get the timestamp of the RGB-D frame.
 
+        .. note::
+            If the timestamp wasn't provided when the frame was sent, this will return None.
+
         :return:    The timestamp of the RGB-D frame.
         """
         return self.__frame_timestamp

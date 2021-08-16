@@ -103,7 +103,7 @@ class RGBDFrameMessageUtil:
         :param depth_image:     The depth image (with dtype np.uint16).
         :param pose:            The pose.
         :param msg:             The uncompressed RGB-D frame message.
-        :param frame_timestamp: The timestamp for the frame (if known).
+        :param frame_timestamp: The frame timestamp (this is optional, and can be None if not known).
         """
         msg.set_frame_index(frame_idx)
         msg.set_frame_timestamp(frame_timestamp)

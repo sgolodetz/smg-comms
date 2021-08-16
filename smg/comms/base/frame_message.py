@@ -70,6 +70,9 @@ class FrameMessage(Message):
         """
         Get the frame timestamp from the message.
 
+        .. note::
+            The frame timestamp will either be a positive floating-point number, or None.
+
         :return:    The frame timestamp.
         """
         frame_timestamp: float = struct.unpack_from(
@@ -127,8 +130,14 @@ class FrameMessage(Message):
         """
         Copy a frame timestamp into the appropriate byte segment in the message.
 
+        .. note::
+            The frame timestamp must either be a positive floating-point number, or None.
+
         :param frame_timestamp: The frame timestamp.
         """
+        if frame_timestamp is not None and frame_timestamp < 0:
+            raise RuntimeError("Frame timestamps must be either positive or None")
+
         struct.pack_into(
             self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0],
             frame_timestamp if frame_timestamp is not None else -1.0
