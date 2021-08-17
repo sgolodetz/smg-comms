@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import struct
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from .calibration_message import CalibrationMessage
 from .frame_message import FrameMessage
@@ -22,7 +22,7 @@ class RGBDFrameMessageUtil:
         :return:    The compressed message.
         """
         # Extract the relevant data from the uncompressed frame message.
-        frame_idx, rgb_image, depth_image, pose = RGBDFrameMessageUtil.extract_frame_data(msg)
+        frame_idx, frame_timestamp, rgb_image, depth_image, pose = RGBDFrameMessageUtil.extract_frame_data(msg)
 
         # Compress the RGB and depth images.
         compressed_rgb_image = cv2.imencode(".jpg", rgb_image, [cv2.IMWRITE_JPEG_QUALITY, 90])[1]  # type: np.ndarray
@@ -33,6 +33,7 @@ class RGBDFrameMessageUtil:
             msg.get_image_shapes(), [len(compressed_rgb_image), len(compressed_depth_image)]
         )
         compressed_msg.set_frame_index(frame_idx)
+        compressed_msg.set_frame_timestamp(frame_timestamp)
         compressed_msg.set_image_data(0, compressed_rgb_image.flatten())
         compressed_msg.set_pose(0, pose)
         compressed_msg.set_image_data(1, compressed_depth_image.flatten())
@@ -50,6 +51,7 @@ class RGBDFrameMessageUtil:
         """
         # Extract the relevant data from the compressed frame message.
         frame_idx = msg.get_frame_index()               # type: int
+        frame_timestamp = msg.get_frame_timestamp()     # type: Optional[float]
         compressed_rgb_image = msg.get_image_data(0)    # type: np.ndarray
         compressed_depth_image = msg.get_image_data(1)  # type: np.ndarray
         pose = msg.get_pose(0)                          # type: np.ndarray
@@ -63,42 +65,48 @@ class RGBDFrameMessageUtil:
             msg.get_image_shapes(),
             [rgb_image.nbytes, depth_image.nbytes]
         )
-        RGBDFrameMessageUtil.fill_frame_message(frame_idx, rgb_image, depth_image, pose, decompressed_msg)
+        RGBDFrameMessageUtil.fill_frame_message(
+            frame_idx, rgb_image, depth_image, pose, decompressed_msg, frame_timestamp=frame_timestamp
+        )
 
         return decompressed_msg
 
     @staticmethod
-    def extract_frame_data(msg: FrameMessage) -> Tuple[int, np.ndarray, np.ndarray, np.ndarray]:
+    def extract_frame_data(msg: FrameMessage) -> Tuple[int, Optional[float], np.ndarray, np.ndarray, np.ndarray]:
         """
         Extract the relevant data from an uncompressed RGB-D frame message.
 
         :param msg: The uncompressed RGB-D frame message.
-        :return:    A tuple consisting of the frame index, the RGB image, the depth image and the pose.
+        :return:    A tuple consisting of the frame index, the frame timestamp, the RGB image, the depth image
+                    and the pose.
         """
-        frame_idx = msg.get_frame_index()                                                           # type: int
-        rgb_image = msg.get_image_data(0).reshape(msg.get_image_shapes()[0])                        # type: np.ndarray
+        frame_idx = msg.get_frame_index()  # type: int
+        frame_timestamp = msg.get_frame_timestamp()  # type: Optional[float]
+        rgb_image = msg.get_image_data(0).reshape(msg.get_image_shapes()[0])  # type: np.ndarray
         depth_image = msg.get_image_data(1).view(np.uint16).reshape(msg.get_image_shapes()[1][:2])  # type: np.ndarray
-        pose = msg.get_pose(0)                                                                      # type: np.ndarray
+        pose = msg.get_pose(0)  # type: np.ndarray
 
         # Note: It's extremely important that we return *copies* of the data here, since the versions in
         #       the message may change once this method returns. (The context is that the message comes
         #       from a pool, and it will be returned to the pool once the lock that's held whilst this
         #       method is called is released. See also MappingClientHandler.get_frame.)
-        return frame_idx, rgb_image.copy(), depth_image.copy(), pose.copy()
+        return frame_idx, frame_timestamp, rgb_image.copy(), depth_image.copy(), pose.copy()
 
     @staticmethod
     def fill_frame_message(frame_idx: int, rgb_image: np.ndarray, depth_image: np.ndarray, pose: np.ndarray,
-                           msg: FrameMessage) -> None:
+                           msg: FrameMessage, *, frame_timestamp: Optional[float] = None) -> None:
         """
         Fill an uncompressed RGB-D frame message with the necessary data.
 
-        :param frame_idx:   The frame index.
-        :param rgb_image:   The RGB-D image.
-        :param depth_image: The depth image (with dtype np.uint16).
-        :param pose:        The pose.
-        :param msg:         The uncompressed RGB-D frame message.
+        :param frame_idx:       The frame index.
+        :param rgb_image:       The RGB-D image.
+        :param depth_image:     The depth image (with dtype np.uint16).
+        :param pose:            The pose.
+        :param msg:             The uncompressed RGB-D frame message.
+        :param frame_timestamp: The frame timestamp (this is optional, and can be None if not known).
         """
         msg.set_frame_index(frame_idx)
+        msg.set_frame_timestamp(frame_timestamp)
         msg.set_image_data(0, rgb_image.reshape(-1))
         msg.set_pose(0, pose)
         msg.set_image_data(1, depth_image.reshape(-1).view(np.uint8))
