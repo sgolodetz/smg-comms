@@ -134,7 +134,7 @@ class MappingClientHandler:
         """Run an iteration of the main loop for the client."""
         # Try to read a frame header message.
         header_msg = FrameHeaderMessage(self.__calib_msg.get_max_images())  # type: FrameHeaderMessage
-        self.__connection_ok = SocketUtil.read_message(self.__sock, header_msg)
+        self.__connection_ok = SocketUtil.read_message(self.__sock, header_msg, self.__should_terminate)
 
         # If that succeeds:
         if self.__connection_ok:
@@ -144,7 +144,7 @@ class MappingClientHandler:
             frame_msg = FrameMessage(image_shapes, image_byte_sizes)  # type: FrameMessage
 
             # Try to read the contents of the frame message from the client.
-            self.__connection_ok = SocketUtil.read_message(self.__sock, frame_msg)
+            self.__connection_ok = SocketUtil.read_message(self.__sock, frame_msg, self.__should_terminate)
 
             # If that succeeds:
             if self.__connection_ok:

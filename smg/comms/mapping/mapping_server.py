@@ -240,8 +240,13 @@ class MappingServer:
 
             for s in readable:
                 if s is server_sock:
+                    # Accept a client connection, and set a short timeout on the socket so that reads can be
+                    # interrupted if necessary (e.g. when we want to terminate).
                     client_sock, client_endpoint = server_sock.accept()
+                    client_sock.settimeout(0.1)
+
                     print("Accepted connection from client {} @ {}".format(self.__next_client_id, client_endpoint))
+
                     with self.__lock:
                         client_handler = MappingClientHandler(
                             self.__next_client_id, client_sock, self.__should_terminate,
