@@ -18,7 +18,10 @@ class SkeletonDetectionService:
 
     # CONSTRUCTOR
 
-    def __init__(self, frame_processor: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]],
+    def __init__(self, frame_processor: Callable[
+                    [np.ndarray, np.ndarray, np.ndarray],
+                    Tuple[List[Skeleton3D], Optional[np.ndarray]]
+                 ],
                  port: int = 7852, *, debug: bool = False,
                  frame_decompressor: Optional[Callable[[FrameMessage], FrameMessage]] = None,
                  post_client_hook: Optional[Callable[[], None]] = None):
@@ -35,7 +38,7 @@ class SkeletonDetectionService:
         self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
         self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
         self.__frame_processor = frame_processor \
-            # type: Callable[[np.ndarray, np.ndarray, np.ndarray], List[Skeleton3D]]
+            # type: Callable[[np.ndarray, np.ndarray, np.ndarray], Tuple[List[Skeleton3D], Optional[np.ndarray]]]
         self.__port = port                              # type: int
         self.__post_client_hook = post_client_hook      # type: Optional[Callable[[], None]]
 
@@ -115,15 +118,17 @@ class SkeletonDetectionService:
                                 # Detect any people who are present in the frame.
                                 receiver(decompressed_frame_msg)
 
-                                skeletons = self.__frame_processor(
+                                skeletons, people_mask = self.__frame_processor(
                                     receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
                                 )
 
-                                # Render a mask for all the people in the frame.
-                                height, width = receiver.get_rgb_image().shape[:2]
-                                people_mask = self.__render_people_mask(
-                                    skeletons, receiver.get_pose(), intrinsics, width, height
-                                )
+                                # If the skeleton detector did not return a people mask, render one using the
+                                # detected skeletons.
+                                if people_mask is None:
+                                    height, width = receiver.get_rgb_image().shape[:2]
+                                    people_mask = self.__render_people_mask(
+                                        skeletons, receiver.get_pose(), intrinsics, width, height
+                                    )
 
                     # Otherwise, if this is the end of a detection:
                     elif value == SkeletonControlMessage.END_DETECTION:
