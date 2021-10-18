@@ -122,8 +122,8 @@ class SkeletonDetectionService:
                                     receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose()
                                 )
 
-                                # If the skeleton detector did not return a mask for all the people in the frame,
-                                # render one using the detected skeletons.
+                                # If the skeleton detector did not return a people mask, render one using the
+                                # detected skeletons.
                                 if people_mask is None:
                                     height, width = receiver.get_rgb_image().shape[:2]
                                     people_mask = self.__render_people_mask(
