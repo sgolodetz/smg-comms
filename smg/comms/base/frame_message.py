@@ -75,9 +75,9 @@ class FrameMessage(Message):
 
         :return:    The frame timestamp.
         """
-        frame_timestamp: float = struct.unpack_from(
+        frame_timestamp = struct.unpack_from(
             self.__frame_timestamp_fmt, self._data, self.__frame_timestamp_segment[0]
-        )[0]
+        )[0]  # type: float
         return frame_timestamp if frame_timestamp >= 0 else None
 
     def get_image_byte_sizes(self) -> List[int]:
