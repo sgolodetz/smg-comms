@@ -19,7 +19,7 @@ class SkeletonDetectionService:
     # CONSTRUCTOR
 
     def __init__(self, frame_processor: Callable[
-                    [np.ndarray, np.ndarray, np.ndarray, Tuple[float, float, float, float]],
+                    [int, np.ndarray, np.ndarray, np.ndarray, Tuple[float, float, float, float]],
                     Tuple[List[Skeleton3D], Optional[np.ndarray]]
                  ],
                  port: int = 7852, *, debug: bool = False,
@@ -37,7 +37,7 @@ class SkeletonDetectionService:
         self.__debug = debug                            # type: bool
         self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
         self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
-        self.__frame_processor = frame_processor        # type: Callable[[np.ndarray, np.ndarray, np.ndarray, Tuple[float, float, float, float]], Tuple[List[Skeleton3D], Optional[np.ndarray]]]
+        self.__frame_processor = frame_processor        # type: Callable[[int, np.ndarray, np.ndarray, np.ndarray, Tuple[float, float, float, float]], Tuple[List[Skeleton3D], Optional[np.ndarray]]]
         self.__port = port                              # type: int
         self.__post_client_hook = post_client_hook      # type: Optional[Callable[[], None]]
 
@@ -118,8 +118,8 @@ class SkeletonDetectionService:
                                 receiver(decompressed_frame_msg)
 
                                 skeletons, people_mask = self.__frame_processor(
-                                    receiver.get_rgb_image(), receiver.get_depth_image(), receiver.get_pose(),
-                                    intrinsics
+                                    receiver.get_frame_index(), receiver.get_rgb_image(), receiver.get_depth_image(),
+                                    receiver.get_pose(), intrinsics
                                 )
 
                                 # If the skeleton detector did not return a people mask, render one using the

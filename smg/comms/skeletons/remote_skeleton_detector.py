@@ -56,7 +56,7 @@ class RemoteSkeletonDetector:
 
     # PUBLIC METHODS
 
-    def begin_detection(self, colour_image: np.ndarray, world_from_camera: np.ndarray) -> bool:
+    def begin_detection(self, colour_image: np.ndarray, world_from_camera: np.ndarray, *, frame_idx: int = -1) -> bool:
         """
         Try to request that the remote skeleton detection service detect any skeletons in the specified colour image.
 
@@ -65,13 +65,13 @@ class RemoteSkeletonDetector:
 
         :param colour_image:        The colour image.
         :param world_from_camera:   The pose from which the image was captured.
+        :param frame_idx:           The frame index (if available).
         :return:                    True, if the detection was successfully requested, or False otherwise.
         """
         # Make the frame message.
-        dummy_frame_idx = -1  # type: int
         dummy_depth_image = np.zeros(colour_image.shape[:2], dtype=np.uint16)  # type: np.ndarray
         frame_msg = RGBDFrameMessageUtil.make_frame_message(
-            dummy_frame_idx, colour_image, dummy_depth_image, world_from_camera
+            frame_idx, colour_image, dummy_depth_image, world_from_camera
         )  # type: FrameMessage
 
         # If requested, compress the frame prior to transmission.
@@ -103,17 +103,18 @@ class RemoteSkeletonDetector:
 
         return connection_ok
 
-    def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray) \
+    def detect_skeletons(self, colour_image: np.ndarray, world_from_camera: np.ndarray, *, frame_idx: int = -1) \
             -> Tuple[Optional[List[Skeleton3D]], Optional[np.ndarray]]:
         """
         Try to use the remote skeleton detection service to detect any skeletons in the specified colour image.
 
         :param colour_image:        The colour image.
         :param world_from_camera:   The pose from which the image was captured.
+        :param frame_idx:           The frame index (if available).
         :return:                    A tuple consisting of a list of skeletons and a people mask, if the detection
                                     succeeded, or (None, None) otherwise.
         """
-        if self.begin_detection(colour_image, world_from_camera):
+        if self.begin_detection(colour_image, world_from_camera, frame_idx=frame_idx):
             return self.end_detection()
         else:
             return None, None
