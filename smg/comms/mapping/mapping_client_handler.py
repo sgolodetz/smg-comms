@@ -40,6 +40,7 @@ class MappingClientHandler:
         self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
         self.__frame_message_queue = PooledQueue[FrameMessage](pool_empty_strategy)  # type: PooledQueue[FrameMessage]
         self.__lock = threading.Lock()                  # type: threading.Lock
+        self.__newest_frame_msg = None                  # type: Optional[FrameMessage]
         self.__should_terminate = should_terminate      # type: threading.Event
         self.__sock = sock                              # type: socket.SocketType
         self.__thread = None                            # type: Optional[threading.Thread]
@@ -110,22 +111,20 @@ class MappingClientHandler:
 
     def peek_newest_frame(self, receiver: Callable[[FrameMessage], None]) -> bool:
         """
-        Peek at the newest frame received from the client that has not yet been processed (if any).
+        Peek at the newest frame received from the client (if any).
 
         .. note::
             The concept of a 'frame receiver' is used to obviate the server from needing to know about the contents
             of frame messages. This way, the frame receiver needs to know how to handle the frame message that it's
             given, but the server can just forward it to the receiver without caring.
 
-        :param receiver:    The frame receiver to which to pass the newest frame from the client that has not
-                            yet been processed.
+        :param receiver:    The frame receiver to which to pass the newest frame from the client.
         :return:            True, if a newest frame existed and was passed to the receiver, or False otherwise.
         """
         with self.__lock:
-            # If any frames from the client have not yet been processed, pass the last frame on the message queue
-            # (i.e. the newest frame) to the frame receiver.
-            if self.__frame_message_queue.size() > 0:
-                receiver(self.__frame_message_queue.peek_last(self.__should_terminate))
+            # If any frame has ever been received from the client, pass the newest frame to the frame receiver.
+            if self.__newest_frame_msg is not None:
+                receiver(self.__newest_frame_msg)
                 return True
             else:
                 return False
@@ -153,7 +152,12 @@ class MappingClientHandler:
                 if self.__frame_decompressor is not None:
                     decompressed_frame_msg = self.__frame_decompressor(frame_msg)
 
-                # Push the decompressed frame onto the message queue.
+                # Save the decompressed frame as the newest one we have received. We do this so that we have a
+                # record of the newest frame received (e.g. to serve peeks) even if the message queue empties.
+                with self.__lock:
+                    self.__newest_frame_msg = decompressed_frame_msg
+
+                # Also push the decompressed frame onto the message queue.
                 with self.__frame_message_queue.begin_push(self.__should_terminate) as push_handler:
                     elt = push_handler.get()  # type: Optional[FrameMessage]
                     if elt is not None:
