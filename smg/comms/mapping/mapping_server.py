@@ -128,7 +128,7 @@ class MappingServer:
 
     def peek_newest_frame(self, client_id: int, receiver: Callable[[FrameMessage], None]) -> bool:
         """
-        Peek at the newest frame from the specified client that has not yet been processed (if any).
+        Peek at the newest frame from the specified client.
 
         .. note::
             The concept of a 'frame receiver' is used to obviate the server from needing to know about the contents
@@ -136,8 +136,7 @@ class MappingServer:
             given, but the server can just forward it to the receiver without caring.
 
         :param client_id:   The ID of the client.
-        :param receiver:    The frame receiver to which to pass the newest frame from the client that has
-                            not yet been processed.
+        :param receiver:    The frame receiver to which to pass the newest frame from the client.
         :return:            True, if a newest frame existed and was passed to the receiver, or False otherwise.
         """
         client_handler = self._get_client_handler(client_id, wait_for_start=True)  # type: MappingClientHandler
