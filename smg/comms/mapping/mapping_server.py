@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 
 from select import select
 from typing import Callable, Dict, Optional, List, Set, Tuple
@@ -212,8 +213,12 @@ class MappingServer:
         while client_handler.is_connection_ok() and not self.__should_terminate.is_set():
             client_handler.run_iter()
 
-        # Run the post-loop code for the client.
-        client_handler.run_post()
+        # Before stopping the client, wait until either (a) the client's frame message queue has fully drained,
+        # or (b) the server itself is terminating.
+        if not self.__should_terminate.is_set():
+            print("Waiting for client's queue to drain: {}".format(client_id))
+            while client_handler.has_frames_now() and not self.__should_terminate.is_set():
+                time.sleep(0.1)
 
         # Once the client's finished, add it to the finished clients set and remove its handler.
         with self.__lock:
