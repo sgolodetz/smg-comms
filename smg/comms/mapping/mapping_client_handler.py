@@ -167,11 +167,6 @@ class MappingClientHandler:
                 # Send an acknowledgement to the client.
                 self.__connection_ok = SocketUtil.write_message(self.__sock, AckMessage())
 
-    def run_post(self) -> None:
-        """Run any code that should happen after the main loop for the client."""
-        # This is currently a no-op.
-        pass
-
     def run_pre(self) -> None:
         """Run any code that should happen before the main loop for the client."""
         # Read a calibration message from the client.
