@@ -179,7 +179,7 @@ class SkeletonDetectionService:
             if self.__post_client_hook is not None:
                 self.__post_client_hook()
 
-    # PRIVATE METHODS
+    # PRIVATE STATIC METHODS
 
     @staticmethod
     def __render_person_mask(skeleton: Skeleton3D) -> None:
