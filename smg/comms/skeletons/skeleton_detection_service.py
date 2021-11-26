@@ -183,6 +183,11 @@ class SkeletonDetectionService:
 
     @staticmethod
     def __render_person_mask(skeleton: Skeleton3D) -> None:
-        # Render the skeleton's bounding shapes in white.
+        """
+        Render a person mask for a skeleton by rendering the skeleton's bounding shapes in white.
+
+        :param skeleton:    The skeleton.
+        :return:            The person mask.
+        """
         glColor3f(1.0, 1.0, 1.0)
         SkeletonRenderer.render_bounding_shapes(skeleton)
