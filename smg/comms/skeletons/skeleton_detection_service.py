@@ -5,9 +5,7 @@ from OpenGL.GL import *
 from select import select
 from typing import Callable, List, Optional, Tuple
 
-from smg.opengl import OpenGLFrameBuffer, OpenGLMatrixContext, OpenGLUtil
-from smg.rigging.helpers import CameraPoseConverter
-from smg.skeletons import Skeleton3D, SkeletonRenderer
+from smg.skeletons import PeopleMaskRenderer, Skeleton3D, SkeletonRenderer
 
 from ..base import *
 from .skeleton_control_message import SkeletonControlMessage
@@ -34,12 +32,12 @@ class SkeletonDetectionService:
         :param frame_decompressor:  An optional function to use to decompress received frames.
         :param post_client_hook:    An optional function to call each time a client disconnects.
         """
-        self.__debug = debug                            # type: bool
-        self.__framebuffer = None                       # type: Optional[OpenGLFrameBuffer]
-        self.__frame_decompressor = frame_decompressor  # type: Optional[Callable[[FrameMessage], FrameMessage]]
-        self.__frame_processor = frame_processor        # type: Callable[[int, np.ndarray, np.ndarray, np.ndarray, Tuple[float, float, float, float]], Tuple[List[Skeleton3D], Optional[np.ndarray]]]
-        self.__port = port                              # type: int
-        self.__post_client_hook = post_client_hook      # type: Optional[Callable[[], None]]
+        self.__debug = debug                                # type: bool
+        self.__frame_decompressor = frame_decompressor      # type: Optional[Callable[[FrameMessage], FrameMessage]]
+        self.__frame_processor = frame_processor            # type: Callable[[int, np.ndarray, np.ndarray, np.ndarray, Tuple[float, float, float, float]], Tuple[List[Skeleton3D], Optional[np.ndarray]]]
+        self.__people_mask_renderer = PeopleMaskRenderer()  # type: PeopleMaskRenderer
+        self.__port = port                                  # type: int
+        self.__post_client_hook = post_client_hook          # type: Optional[Callable[[], None]]
 
     # PUBLIC METHODS
 
@@ -126,8 +124,9 @@ class SkeletonDetectionService:
                                 # detected skeletons.
                                 if people_mask is None:
                                     height, width = receiver.get_rgb_image().shape[:2]
-                                    people_mask = self.__render_people_mask(
-                                        skeletons, receiver.get_pose(), intrinsics, width, height
+                                    people_mask = self.__people_mask_renderer.render_people_mask(
+                                        SkeletonDetectionService.__render_person_mask, skeletons,
+                                        receiver.get_pose(), intrinsics, width, height
                                     )
 
                     # Otherwise, if this is the end of a detection:
@@ -178,51 +177,15 @@ class SkeletonDetectionService:
             if self.__post_client_hook is not None:
                 self.__post_client_hook()
 
-    # PRIVATE METHODS
+    # PRIVATE STATIC METHODS
 
-    def __render_people_mask(self, skeletons: List[Skeleton3D], world_from_camera: np.ndarray,
-                             intrinsics: Optional[Tuple[float, float, float, float]],
-                             width: int, height: int) -> np.ndarray:
+    @staticmethod
+    def __render_person_mask(skeleton: Skeleton3D) -> None:
         """
-        Render a mask for all the people detected in a frame.
+        Render a person mask for a skeleton by rendering the skeleton's bounding shapes in white.
 
-        :param skeletons:           The skeletons of the detected people.
-        :param world_from_camera:   The camera pose.
-        :param intrinsics:          The camera intrinsics, if available, as an (fx, fy, cx, cy) tuple.
-        :param width:               The image width.
-        :param height:              The image height.
-        :return:                    A mask for all the people detected in the frame.
+        :param skeleton:    The skeleton.
+        :return:            The person mask.
         """
-        # If the camera intrinsics aren't available, early out.
-        if intrinsics is None:
-            return np.zeros((height, width), dtype=np.uint8)
-
-        # If the OpenGL framebuffer hasn't been constructed yet, construct it now.
-        # FIXME: Support image size changes.
-        if self.__framebuffer is None:
-            self.__framebuffer = OpenGLFrameBuffer(width, height)
-
-        # Render a mask of the skeletons' bounding shapes to the framebuffer.
-        with self.__framebuffer:
-            # Set the viewport to encompass the whole framebuffer.
-            OpenGLUtil.set_viewport((0.0, 0.0), (1.0, 1.0), (width, height))
-
-            # Clear the background to black.
-            glClearColor(0.0, 0.0, 0.0, 1.0)
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-            # Set the projection matrix.
-            with OpenGLMatrixContext(GL_PROJECTION, lambda: OpenGLUtil.set_projection_matrix(
-                intrinsics, width, height
-            )):
-                # Set the model-view matrix.
-                with OpenGLMatrixContext(GL_MODELVIEW, lambda: OpenGLUtil.load_matrix(
-                    CameraPoseConverter.pose_to_modelview(np.linalg.inv(world_from_camera))
-                )):
-                    # Render the skeletons' bounding shapes in white.
-                    glColor3f(1.0, 1.0, 1.0)
-                    for skeleton in skeletons:
-                        SkeletonRenderer.render_bounding_shapes(skeleton)
-
-                    # Make a binary mask from the contents of the framebuffer, and return it.
-                    return OpenGLUtil.read_bgr_image(width, height)[:, :, 0]
+        glColor3f(1.0, 1.0, 1.0)
+        SkeletonRenderer.render_bounding_shapes(skeleton)
