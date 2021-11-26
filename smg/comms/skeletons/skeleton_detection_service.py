@@ -5,8 +5,6 @@ from OpenGL.GL import *
 from select import select
 from typing import Callable, List, Optional, Tuple
 
-from smg.opengl import OpenGLFrameBuffer, OpenGLMatrixContext, OpenGLUtil
-from smg.rigging.helpers import CameraPoseConverter
 from smg.skeletons import PeopleMaskRenderer, Skeleton3D, SkeletonRenderer
 
 from ..base import *
