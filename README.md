@@ -6,9 +6,9 @@ It is a submodule of [smglib](https://github.com/sgolodetz/smglib), the open-sou
 
 ### Development Installation (as part of smglib)
 
-Note: Please read the [top-level README](https://github.com/sgolodetz/smglib/blob/master/README.md) for smglib before following these instructions. 
+Note: Please read the [top-level README](https://github.com/sgolodetz/smglib/blob/master/README.md) for smglib before following these instructions.
 
-1. Change to the `<root>/smg-comms` directory.
+1. Open the terminal, and change to the `<root>/smg-comms` directory.
 
 2. Check out the `master` branch.
 
